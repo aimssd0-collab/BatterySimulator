@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>住宅用蓄電池 経済性シミュレーション</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0ea5e9',
+                        secondary: '#10b981',
+                        dark: '#0f172a',
+                        batteryA: '#3b82f6',
+                        batteryB: '#f59e0b',
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans JP"', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #334155;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        [v-cloak] {
+            display: none !important;
+        }
+
+        .tab-btn {
+            transition: all 0.2s;
+        }
+
+        .tab-active {
+            border-bottom: 2px solid;
+            color: inherit;
+            font-weight: bold;
+            background-color: #f8fafc;
+        }
+
+        .tab-inactive {
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            background-color: #f1f5f9;
+        }
+
+        .tab-inactive:hover {
+            background-color: #f3f4f6;
+        }
+
+        /* 印刷（PDF）用スタイル */
+        @media print {
+            @page {
+                size: landscape;
+                margin: 10mm;
+            }
+
+            html,
+            body {
+                height: auto !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            #app,
+            main {
+                display: block !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-full {
+                display: block !important;
+                width: 100% !important;
+            }
+
+            .glass-panel {
+                border: 1px solid #e2e8f0 !important;
+                background: white !important;
+                box-shadow: none !important;
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+                margin-bottom: 20px !important;
+            }
+
+            .print-break-avoid {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-page-break {
+                page-break-before: always;
+                break-before: page;
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+            }
+
+            .print-mt-8 {
+                margin-top: 2rem !important;
+            }
+
+            canvas {
+                max-height: 300px !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" v-cloak class="min-h-screen pb-20">
+        <!-- Header -->
+        <header class="bg-dark text-white shadow-lg sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <h1 class="text-xl font-bold tracking-tight">蓄電池 比較＆経済性シミュレーター</h1>
+                </div>
+                <!-- 印刷ボタン -->
+                <button onclick="window.scrollTo(0,0); setTimeout(() => window.print(), 100);"
+                    class="no-print bg-white text-dark text-sm font-bold px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                        </path>
+                    </svg>
+                    PDF出力 / 印刷
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column: Input Forms -->
+            <div class="lg:col-span-5 space-y-6 no-print">
+                <!-- Section 1: Basic Info -->
+                <section class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-lg font-bold border-b pb-3 mb-5 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-sm">1</span>
+                            基本情報（世帯・太陽光）
+                        </div>
+                    </h2>
+
+                    <div class="space-y-4">
+                        <!-- シナリオ設定 -->
+                        <div class="bg-blue-50 p-4 border border-blue-200 rounded-xl mb-4">
+                            <h3 class="font-bold text-sm text-blue-800 mb-2 flex items-center gap-1">導入シナリオ</h3>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" v-model="inputs.scenario" value="1"
+                                        class="text-primary focus:ring-primary" @change="calculateSimulation">
+                                    <span class="text-sm">太陽光＋蓄電池 <span
+                                            class="font-bold text-blue-700">同時導入</span></span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" v-model="inputs.scenario" value="2"
+                                        class="text-primary focus:ring-primary" @change="calculateSimulation">
+                                    <span class="text-sm">太陽光は既設で <span
+                                            class="font-bold text-amber-600">蓄電池を後付け</span></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 後付け（シナリオ2）の場合のみ表示されるPCS交換費用 -->
+                        <div v-if="inputs.scenario === '2'"
+                            class="bg-amber-50 p-4 border border-amber-200 rounded-xl mb-4">
+                            <h3 class="font-bold text-sm text-amber-800 mb-2 flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                将来のPCS（パワコン）交換費用
+                            </h3>
+                            <p class="text-xs text-amber-700 mb-3">※蓄電池導入時にハイブリッドPCSに交換することで、将来の単独交換が不要になるためメリットに加算されます。
+                            </p>
+                            <div class="flex items-center gap-2">
+                                <input type="number" v-model.number="inputs.pcsReplacementCost"
+                                    class="w-32 border border-amber-300 rounded-md px-2 py-1 text-sm bg-white"
+                                    step="10000" min="0">
+                                <span class="text-sm font-medium text-amber-900">円</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">年間太陽光発電量 (kWh)</label>
+                                <input type="number" v-model.number="inputs.annualProduction"
+                                    class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">年間消費電力量 (kWh)</label>
+                                <input type="number" v-model.number="inputs.annualConsumption"
+                                    class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- 拡販機能：電気代上昇リスク -->
+                        <div class="bg-red-50 p-4 border border-red-200 rounded-xl mt-4">
+                            <h3 class="font-bold text-sm text-red-800 mb-2 flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                将来の電気代高騰リスク（予測）
+                            </h3>
+                            <p class="text-xs text-red-600 mb-3">※昨今の燃料費高騰を踏まえ、買電単価が毎年どれくらい上がるか設定します。</p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-red-900">毎年</span>
+                                <input type="number" v-model.number="inputs.inflationRate"
+                                    class="w-20 border border-red-300 rounded-md px-2 py-1 text-sm focus:ring-1 focus:ring-red-500 focus:outline-none bg-white"
+                                    step="0.5" min="0">
+                                <span class="text-sm font-medium text-red-900">% ずつ値上がりする</span>
+                            </div>
+                        </div>
+
+                        <!-- 拡販機能：ローン額 -->
+                        <div class="bg-emerald-50 p-4 border border-emerald-200 rounded-xl mt-4">
+                            <h3 class="font-bold text-sm text-emerald-800 mb-2 flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                                    </path>
+                                </svg>
+                                ローン月額（任意入力）
+                            </h3>
+                            <p class="text-xs text-emerald-600 mb-3">※入力すると、月々の家計の出費（ローン＋電気代）がどう変わるかのグラフが表示されます。</p>
+                            <div class="grid grid-cols-2 gap-3 items-end">
+                                <div>
+                                    <label class="block text-xs text-emerald-700 mb-1">【蓄電池A】の月々返済額</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" v-model.number="inputs.loanA"
+                                            class="w-full border border-emerald-300 rounded-md px-2 py-1 text-sm bg-white"
+                                            placeholder="例: 10000" min="0"> <span class="text-xs">円</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-emerald-700 mb-1">【蓄電池B】の月々返済額</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" v-model.number="inputs.loanB"
+                                            class="w-full border border-emerald-300 rounded-md px-2 py-1 text-sm bg-white"
+                                            placeholder="例: 15000" min="0"> <span class="text-xs">円</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-blue-50 rounded-xl mt-4 border border-blue-100">
+                            <h3 class="font-medium text-sm mb-3 flex items-center gap-1 text-blue-800">売電単価の設定</h3>
+                            <div class="grid grid-cols-2 gap-3 items-end">
+                                <div>
+                                    <label class="block text-xs text-blue-700 mb-1">期間１（FIT期間）</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" v-model.number="inputs.sellPriceFirstPeriodYears"
+                                            class="w-16 border rounded-md px-2 py-1 text-sm focus:ring-1 focus:outline-none"
+                                            min="0">
+                                        <span class="text-sm">年目まで</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" v-model.number="inputs.sellPriceFirstPeriod"
+                                        class="w-full border rounded-md px-2 py-1 text-sm focus:ring-1 focus:outline-none"
+                                        step="0.1">
+                                    <span class="text-sm">円/kWh</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 items-end mt-3">
+                                <div>
+                                    <label class="block text-xs text-blue-700 mb-1">期間２（FIT終了後）</label>
+                                    <div class="text-sm py-1">{{ inputs.sellPriceFirstPeriodYears + 1 }} 年目以降</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" v-model.number="inputs.sellPriceSecondPeriod"
+                                        class="w-full border rounded-md px-2 py-1 text-sm focus:ring-1 focus:outline-none"
+                                        step="0.1">
+                                    <span class="text-sm">円/kWh</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: Electricity Rates -->
+                <section class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-lg font-bold border-b pb-3 mb-5 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-sm">2</span>
+                            時間帯別 契約電気料金
+                        </div>
+                        <button @click="addRate"
+                            class="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-full font-medium transition-colors flex items-center gap-1">
+                            追加
+                        </button>
+                    </h2>
+
+                    <div class="space-y-3">
+                        <div v-for="(rate, index) in inputs.rates" :key="index"
+                            class="bg-gray-50 border border-gray-100 rounded-lg p-3 relative group">
+                            <button @click="removeRate(index)"
+                                class="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                v-if="inputs.rates.length > 1">✕</button>
+                            <div class="grid grid-cols-12 gap-3 mb-2">
+                                <div class="col-span-4">
+                                    <label class="block text-xs text-gray-500 mb-1">名称</label>
+                                    <input type="text" v-model="rate.name"
+                                        class="w-full border-b bg-transparent px-1 py-1 text-sm focus:border-primary focus:outline-none">
+                                </div>
+                                <div class="col-span-8">
+                                    <label class="block text-xs text-gray-500 mb-1">買電単価</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" v-model.number="rate.price"
+                                            class="w-full border-b bg-transparent px-1 py-1 text-sm focus:border-primary focus:outline-none"
+                                            step="0.1">
+                                        <span class="text-xs text-gray-500">円/kWh</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-gray-500">時間帯:</label>
+                                <select v-model.number="rate.startHour"
+                                    class="bg-white border text-xs px-2 py-1 outline-none">
+                                    <option v-for="h in 24" :value="h-1">{{ h-1 }}:00</option>
+                                </select>
+                                <span class="text-gray-400 text-xs">〜</span>
+                                <select v-model.number="rate.endHour"
+                                    class="bg-white border text-xs px-2 py-1 outline-none">
+                                    <option v-for="h in 24" :value="h">{{ h }}:00</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- エラーメッセージ表示エリア -->
+                    <div v-if="rateError"
+                        class="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-200 flex items-start gap-2">
+                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>{{ rateError }}</span>
+                    </div>
+
+                    <div class="mt-5 pt-4 border-t flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-medium text-gray-700">再エネ賦課金:</label>
+                            <input type="number" v-model.number="inputs.renewableSurcharge"
+                                class="w-20 border rounded-md px-2 py-1 text-sm focus:ring-1 focus:outline-none"
+                                step="0.01">
+                            <span class="text-sm text-gray-500">円/kWh</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="showPlanModal = true"
+                                class="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-full font-medium transition-colors">プラン読込</button>
+                            <button @click="saveCurrentPlan"
+                                class="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1.5 rounded-full font-medium transition-colors">プラン保存</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3: Battery Specs -->
+                <section class="glass-panel rounded-2xl overflow-hidden border border-gray-200">
+                    <div class="p-6 pb-0">
+                        <h2 class="text-lg font-bold mb-4 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-sm">3</span>
+                                蓄電池 性能表示ラベル
+                            </div>
+                            <div class="flex gap-2">
+                                <button @click="showBatteryModal = true"
+                                    class="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-full font-medium transition-colors">リスト読込</button>
+                                <button @click="saveCurrentBattery"
+                                    class="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1.5 rounded-full font-medium transition-colors">今の内容を保存</button>
+                            </div>
+                        </h2>
+                    </div>
+
+                    <div class="flex w-full mb-4 border-b">
+                        <button @click="activeTab = 'A'"
+                            :class="[activeTab === 'A' ? 'tab-active border-blue-500 text-blue-700' : 'tab-inactive']"
+                            class="tab-btn flex-1 py-3 text-sm rounded-tr-lg">
+                            <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-1"></span>蓄電池 A
+                        </button>
+                        <button @click="activeTab = 'B'"
+                            :class="[activeTab === 'B' ? 'tab-active border-amber-500 text-amber-700' : 'tab-inactive']"
+                            class="tab-btn flex-1 py-3 text-sm rounded-tl-lg">
+                            <span class="inline-block w-3 h-3 rounded-full bg-amber-500 mr-1"></span>蓄電池 B
+                        </button>
+                    </div>
+
+                    <div class="p-6 pt-2 space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">機器の名称 / 型式</label>
+                                <input type="text" v-model="currentBattery.model"
+                                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">初期実効容量 (kWh)</label>
+                                <input type="number" v-model.number="currentBattery.effectiveCapacity"
+                                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none" step="0.1">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">定格出力 (kW)</label>
+                                <input type="number" v-model.number="currentBattery.output"
+                                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none" step="0.1">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">定格充放電効率 (%)</label>
+                                <input type="number" v-model.number="currentBattery.efficiency"
+                                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none" max="100"
+                                    step="0.1">
+                            </div>
+                            <!-- 拡販機能：深夜電力活用機能の有無 -->
+                            <div
+                                class="col-span-1 md:col-span-2 bg-purple-50 p-3 rounded-lg border border-purple-200 mt-2">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" v-model="currentBattery.aiArbitrage"
+                                        class="w-5 h-5 text-purple-600 rounded">
+                                    <span class="text-sm font-bold text-purple-900">AI経済モード（深夜電力の自動充放電）を搭載している</span>
+                                </label>
+                                <p class="text-xs text-purple-700 mt-1 pl-7">
+                                    ※チェックを入れると、太陽光が不足する冬季や雨天時（年間100日想定）に、安い深夜電力で充電し翌日の高い昼間に放電して差額を自動で稼ぐ機能として評価加算されます。
+                                </p>
+                            </div>
+                            <div class="col-span-1 md:col-span-2">
+                                <label class="block text-sm font-medium mb-1">{{ activeTab === 'A' ? 'システム生涯蓄電容量' :
+                                    '生涯充放電容量' }} (kWh)</label>
+                                <input type="number" v-model.number="currentBattery.lifecycleCapacity"
+                                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Results & Charts -->
+            <div class="lg:col-span-7 space-y-6 print-full">
+                <!-- Action Bar -->
+                <div
+                    class="no-print glass-panel p-4 rounded-2xl flex items-center justify-between sticky top-[80px] z-40 bg-white/95">
+                    <div>
+                        <p class="text-sm font-bold text-gray-700">最新条件でシミュレーションを実行します</p>
+                    </div>
+                    <button @click="calculateSimulation"
+                        class="bg-secondary hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 transform active:scale-95">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z">
+                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        シミュレーション実行
+                    </button>
+                </div>
+
+                <!-- Results Section -->
+                <div v-if="results" class="space-y-6 animate-fade-in relative">
+
+                    <!-- 印刷用：シミュレーション前提条件のサマリー（画面では非表示） -->
+                    <div
+                        class="hidden print:block bg-white border-2 border-gray-800 rounded-xl p-6 mb-8 text-sm break-inside-avoid">
+                        <h2 class="text-xl font-bold text-center border-b-2 border-gray-800 pb-2 mb-4">シミュレーション前提条件</h2>
+
+                        <div class="grid grid-cols-2 gap-x-8 gap-y-4">
+                            <div>
+                                <h3 class="font-bold border-b border-gray-300 mb-2">1. 基本情報・シナリオ</h3>
+                                <table class="w-full text-left">
+                                    <tbody>
+                                        <tr>
+                                            <th class="py-1 font-normal text-gray-600">導入シナリオ</th>
+                                            <td class="py-1 font-bold">{{ inputs.scenario === '1' ? '太陽光＋蓄電池 同時導入' :
+                                                '太陽光は既設で 蓄電池を後付け' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="py-1 font-normal text-gray-600">年間太陽光発電量</th>
+                                            <td class="py-1">{{ formatNumber(inputs.annualProduction) }} kWh</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="py-1 font-normal text-gray-600">年間消費電力量</th>
+                                            <td class="py-1">{{ formatNumber(inputs.annualConsumption) }} kWh</td>
+                                        </tr>
+                                        <tr v-if="inputs.scenario === '2'">
+                                            <th class="py-1 font-normal text-gray-600 border-t mt-1 pt-1">将来のPCS交換費用
+                                            </th>
+                                            <td class="py-1 border-t mt-1 pt-1">{{
+                                                formatNumber(inputs.pcsReplacementCost) }} 円 <span
+                                                    class="text-[10px] text-gray-500">(回避メリットとして計上)</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th class="py-1 font-normal text-gray-600 border-t mt-1 pt-1">電気代高騰リスク予測
+                                            </th>
+                                            <td class="py-1 border-t mt-1 pt-1 text-red-600 font-bold">毎年 {{
+                                                inputs.inflationRate }}% 上昇</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="py-1 font-normal text-gray-600">再エネ賦課金</th>
+                                            <td class="py-1">{{ inputs.renewableSurcharge }} 円/kWh</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div>
+                                <h3 class="font-bold border-b border-gray-300 mb-2">2. 時間帯別 契約電気料金</h3>
+                                <table class="w-full text-left bg-gray-50 rounded p-2">
+                                    <tbody>
+                                        <tr v-for="rate in inputs.rates" :key="rate.name">
+                                            <th class="py-1 px-2 font-normal text-gray-600">{{ rate.name }} ({{
+                                                rate.startHour }}:00~{{ rate.endHour }}:00)</th>
+                                            <td class="py-1 px-2">{{ rate.price }} 円/kWh</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <h3 class="font-bold border-b border-gray-300 mb-2 mt-4">3. 売電単価</h3>
+                                <table class="w-full text-left">
+                                    <tbody>
+                                        <tr>
+                                            <th class="py-1 font-normal text-gray-600">FIT期間 ({{
+                                                inputs.sellPriceFirstPeriodYears }}年目まで)</th>
+                                            <td class="py-1">{{ inputs.sellPriceFirstPeriod }} 円/kWh</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="py-1 font-normal text-gray-600">FIT終了後 ({{
+                                                inputs.sellPriceFirstPeriodYears + 1 }}年目以降)</th>
+                                            <td class="py-1">{{ inputs.sellPriceSecondPeriod }} 円/kWh</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <h3 class="font-bold border-b border-gray-300 mb-2">4. 比較蓄電池スペック</h3>
+                            <table class="w-full text-left text-xs bg-gray-50 rounded">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="p-2">機器名称</th>
+                                        <th class="p-2">実効容量</th>
+                                        <th class="p-2">出力</th>
+                                        <th class="p-2">効率</th>
+                                        <th class="p-2">AI経済モード</th>
+                                        <th class="p-2">生涯容量目安</th>
+                                        <th class="p-2">ローン月額</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="isValidA">
+                                        <td class="p-2 font-bold text-blue-700">【A】{{ inputs.batteryA.model }}</td>
+                                        <td class="p-2">{{ inputs.batteryA.effectiveCapacity }} kWh</td>
+                                        <td class="p-2">{{ inputs.batteryA.output }} kW</td>
+                                        <td class="p-2">{{ inputs.batteryA.efficiency }}%</td>
+                                        <td class="p-2">{{ inputs.batteryA.aiArbitrage ? 'あり' : 'なし' }}</td>
+                                        <td class="p-2">{{ formatNumber(inputs.batteryA.lifecycleCapacity) }} kWh</td>
+                                        <td class="p-2">{{ inputs.loanA > 0 ? formatNumber(inputs.loanA) + ' 円' : 'なし'
+                                            }}</td>
+                                    </tr>
+                                    <tr class="border-t" v-if="isValidB">
+                                        <td class="p-2 font-bold text-amber-700">【B】{{ inputs.batteryB.model }}</td>
+                                        <td class="p-2">{{ inputs.batteryB.effectiveCapacity }} kWh</td>
+                                        <td class="p-2">{{ inputs.batteryB.output }} kW</td>
+                                        <td class="p-2">{{ inputs.batteryB.efficiency }}%</td>
+                                        <td class="p-2">{{ inputs.batteryB.aiArbitrage ? 'あり' : 'なし' }}</td>
+                                        <td class="p-2">{{ formatNumber(inputs.batteryB.lifecycleCapacity) }} kWh</td>
+                                        <td class="p-2">{{ inputs.loanB > 0 ? formatNumber(inputs.loanB) + ' 円' : 'なし'
+                                            }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Compare Chart -->
+                    <div class="glass-panel p-6 rounded-2xl relative print-page-break print-mt-8">
+                        <div
+                            class="absolute -top-3 -right-3 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white transform rotate-3">
+                            電気代高騰リスク {{ inputs.inflationRate }}% 反映済！
+                        </div>
+                        <h3 class="text-lg font-bold mb-2">
+                            <span v-if="inputs.scenario === '1'">太陽光＋蓄電池の「確実な差額メリット」</span>
+                            <span v-else>蓄電池を追加しなかった場合との「確実な差額」</span>
+                        </h3>
+                        <p class="text-sm text-gray-600 mb-4" v-if="inputs.scenario === '1'">
+                            太陽光も蓄電池も<span
+                                class="text-red-500 font-bold">導入せず上がり続ける電気代を毎月払い続ける</span>場合と比較して、太陽光発電と蓄電池で自給自足＋深夜電力を活用した際の「純粋な家計メリット（買電削減＋売電収入）」の15年累計グラフです。
+                        </p>
+                        <p class="text-sm text-gray-600 mb-4" v-else>
+                            太陽光だけのままで<span
+                                class="text-red-500 font-bold">上がり続ける電気代を払い続ける</span>場合と比較して、蓄電池で自給自足＋深夜電力を活用した際の「純粋な利益（削減額－売電減収<span
+                                v-if="inputs.scenario === '2' && inputs.pcsReplacementCost > 0">＋将来のPCS交換回避分</span>）」の15年累計グラフです。
+                        </p>
+                        <div class="relative h-80 w-full mb-4 print-break-avoid">
+                            <canvas id="compareChart"></canvas>
+                        </div>
+                        <div class="flex justify-around items-center bg-gray-50 rounded-lg p-4 border">
+                            <div class="text-center border-r pr-6">
+                                <p class="text-xs font-bold text-gray-500 mb-1" v-if="inputs.scenario === '1'">15年間
+                                    何も導入しない場合</p>
+                                <p class="text-xs font-bold text-gray-500 mb-1" v-else>もし蓄電池を入れず太陽光だけの場合</p>
+                                <p class="text-sm">15年間で払う電気代予測</p>
+                                <p class="text-2xl font-black text-red-600 mt-1">¥{{
+                                    formatNumber(results.baselineCost15Y) }}</p>
+                            </div>
+                            <div class="text-center border-r pr-6 pl-2" v-if="isValidA"
+                                :class="{'border-r-0': !isValidB}">
+                                <p class="text-xs font-bold text-blue-600 mb-1">
+                                    <span v-if="inputs.scenario === '1'">【太陽光＋蓄電池A】を導入した場合</span>
+                                    <span v-else>【蓄電池A】を導入した場合</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span v-if="inputs.scenario === '1'">15年間の家計の経済メリット</span>
+                                    <span v-else>15年間の蓄電池単体の純利益</span>
+                                </p>
+                                <p class="text-2xl font-black text-blue-600 mt-1">+ ¥{{
+                                    formatNumber(results.A.batteryPureBenefit15Y) }}</p>
+                            </div>
+                            <div class="text-center pl-2" v-if="isValidB">
+                                <p class="text-xs font-bold text-amber-600 mb-1">
+                                    <span v-if="inputs.scenario === '1'">【太陽光＋蓄電池B】を導入した場合</span>
+                                    <span v-else>【蓄電池B】を導入した場合</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span v-if="inputs.scenario === '1'">15年間の家計の経済メリット</span>
+                                    <span v-else>15年間の蓄電池単体の純利益</span>
+                                </p>
+                                <p class="text-2xl font-black text-amber-600 mt-1">+ ¥{{
+                                    formatNumber(results.B.batteryPureBenefit15Y) }}</p>
+                            </div>
+                        </div>
+
+                        <!-- 拡販機能：15年後の残存価値（寿命までの余裕）の可視化 -->
+                        <div class="mt-4 border-t border-dashed pt-4 print-break-avoid">
+                            <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                さらに！ 15年目以降も続く「想定メリット」
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <!-- 蓄電池Aの残存価値 -->
+                                <div class="bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex items-start gap-3"
+                                    v-if="isValidA">
+                                    <div class="bg-blue-100 p-2 rounded-full text-blue-600">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold text-blue-800">電池A ({{ inputs.batteryA.model }})</p>
+                                        <div v-if="results.A.deathYear && results.A.deathYear <= 15">
+                                            <p class="text-sm text-red-600 font-bold mt-1">15年未満で寿命到達想定</p>
+                                            <p class="text-xs text-gray-500">※ライフサイクル容量を使い切る予測です</p>
+                                        </div>
+                                        <div v-else>
+                                            <p class="text-xs text-gray-600 mt-1">15年経過時の残り蓄電可能量:</p>
+                                            <p class="text-lg font-black text-blue-700">{{
+                                                formatNumber(results.A.remainingCapacity) }}<span
+                                                    class="text-xs font-normal text-blue-600 ml-1">kWh</span></p>
+                                            <div
+                                                class="mt-1 bg-white px-2 py-1 rounded text-[10px] text-gray-600 border border-blue-50 inline-block">
+                                                残りの容量を使い切るまでの<br>想定経済メリット: <span
+                                                    class="text-blue-600 font-bold text-sm">約{{
+                                                    formatNumber(results.A.remainingBenefit) }}</span> 円
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 蓄電池Bの残存価値 -->
+                                <div class="bg-amber-50/50 rounded-lg p-3 border border-amber-100 flex items-start gap-3"
+                                    v-if="isValidB">
+                                    <div class="bg-amber-100 p-2 rounded-full text-amber-600">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold text-amber-800">電池B ({{ inputs.batteryB.model }})
+                                        </p>
+                                        <div v-if="results.B.deathYear && results.B.deathYear <= 15">
+                                            <p class="text-sm text-red-600 font-bold mt-1">15年未満で寿命到達想定</p>
+                                            <p class="text-xs text-gray-500">※ライフサイクル容量を使い切る予測です</p>
+                                        </div>
+                                        <div v-else>
+                                            <p class="text-xs text-gray-600 mt-1">15年経過時の残り蓄電可能量:</p>
+                                            <p class="text-lg font-black text-amber-700">{{
+                                                formatNumber(results.B.remainingCapacity) }}<span
+                                                    class="text-xs font-normal text-amber-600 ml-1">kWh</span></p>
+                                            <div
+                                                class="mt-1 bg-white px-2 py-1 rounded text-[10px] text-gray-600 border border-amber-50 inline-block">
+                                                残りの容量を使い切るまでの<br>想定経済メリット: <span
+                                                    class="text-amber-600 font-bold text-sm">約{{
+                                                    formatNumber(results.B.remainingBenefit) }}</span> 円
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 拡販機能：防災メリットの可視化 (移動済み) -->
+                    <div
+                        class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl p-6 shadow-xl text-white mb-6 print-break-avoid">
+                        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                            <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.381z">
+                                </path>
+                            </svg>
+                            いざという時の安心！【停電時のバックアップ性能】
+                        </h3>
+                        <div class="grid grid-cols-2 gap-6">
+                            <!-- 蓄電池Aの防災力 -->
+                            <div class="bg-white/10 p-4 rounded-xl border border-white/20" v-if="isValidA">
+                                <p class="text-blue-300 text-sm font-bold mb-2">電池A: {{ inputs.batteryA.model }}</p>
+                                <div class="flex gap-4 items-center">
+                                    <div class="text-center">
+                                        <p class="text-xs text-gray-300">冷蔵庫・テレビ・照明の</p>
+                                        <p class="text-xs text-gray-300">連続稼働目安</p>
+                                        <p class="text-3xl font-black text-white mt-1">{{
+                                            Math.floor((inputs.batteryA.effectiveCapacity * 1000) / 400) }}<span
+                                                class="text-sm font-normal ml-1">時間</span></p>
+                                    </div>
+                                    <div class="w-px h-12 bg-white/20"></div>
+                                    <div class="text-center">
+                                        <p class="text-xs text-gray-300">スマホ充電なら</p>
+                                        <p class="text-3xl font-black text-white mt-2">約{{
+                                            Math.floor((inputs.batteryA.effectiveCapacity * 1000) / 15) }}<span
+                                                class="text-sm font-normal ml-1">回分</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 蓄電池Bの防災力 -->
+                            <div class="bg-white/10 p-4 rounded-xl border border-white/20" v-if="isValidB">
+                                <p class="text-amber-300 text-sm font-bold mb-2">電池B: {{ inputs.batteryB.model }}</p>
+                                <div class="flex gap-4 items-center">
+                                    <div class="text-center">
+                                        <p class="text-xs text-gray-300">冷蔵庫・テレビ・照明の</p>
+                                        <p class="text-xs text-gray-300">連続稼働目安</p>
+                                        <p class="text-3xl font-black text-white mt-1">{{
+                                            Math.floor((inputs.batteryB.effectiveCapacity * 1000) / 400) }}<span
+                                                class="text-sm font-normal ml-1">時間</span></p>
+                                    </div>
+                                    <div class="w-px h-12 bg-white/20"></div>
+                                    <div class="text-center">
+                                        <p class="text-xs text-gray-300">スマホ充電なら</p>
+                                        <p class="text-3xl font-black text-white mt-2">約{{
+                                            Math.floor((inputs.batteryB.effectiveCapacity * 1000) / 15) }}<span
+                                                class="text-sm font-normal ml-1">回分</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-3 text-right">※ご家庭の消費電力合計を400W、スマホ充電を15Whとして試算した場合の実力値です。
+                        </p>
+                    </div>
+
+                    <!-- 印刷用グループ化：ローン月額コミコミの家計キャッシュフロー ＆ 免責事項 -->
+                    <div class="print-page-break print-break-avoid">
+                        <!-- 拡販機能：ローン月額コミコミの家計キャッシュフロー -->
+                        <div v-if="(isValidA && inputs.loanA > 0) || (isValidB && inputs.loanB > 0)"
+                            class="glass-panel p-6 rounded-2xl border-2 border-emerald-100 mb-6">
+                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-emerald-800">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                                    </path>
+                                </svg>
+                                導入後の「月々の家計の実質負担」グラフ
+                            </h3>
+                            <p class="text-sm text-gray-600 mb-6">
+                                蓄電池のローンを毎月払っても、<strong>電気代がそれ以上に安くなること</strong>で、実は家計全体の出費は大きく減らす・または維持できるケースが多くあります。1年目の月平均での出費比較をご覧ください。
+                            </p>
+
+                            <div class="relative h-64 w-full">
+                                <canvas id="loanChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Disclaimer -->
+                        <div class="bg-gray-100 p-4 rounded-xl border border-gray-200 mt-8 mb-4">
+                            <p class="text-[10px] text-gray-500 leading-relaxed font-medium">
+                                【免責事項】本ツールによるシミュレーション結果は、入力された条件に基づく概算値です。電気代上昇率、天候による発電量のブレ、深夜電力活用のアルゴリズム、経年劣化などは理想的なモデルを用いて計算しているため、実際の経済効果等を保証するものではありません。各機器の機能詳細はメーカーカタログ等をご確認ください。
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Placeholder when no results -->
+                <div v-else
+                    class="glass-panel p-12 rounded-2xl flex flex-col items-center justify-center text-center h-96 opacity-60">
+                    <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                    <p class="text-gray-500 font-bold mb-2">電気代高騰時代への対策シミュレーション</p>
+                    <p class="text-sm text-gray-400">条件を入力し、「シミュレーション実行」ボタンをクリックしてください。</p>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Battery Modal -->
+        <div v-if="showBatteryModal" class="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+                <div class="p-6 border-b flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">保存済みの蓄電池リスト</h3>
+                    <div class="flex items-center gap-4">
+                        <label
+                            class="cursor-pointer bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                                </path>
+                            </svg>
+                            CSVインポート
+                            <input type="file" accept=".csv" @change="importBatteryCSV" class="hidden">
+                        </label>
+                        <button @click="showBatteryModal = false" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 overflow-y-auto flex-1">
+                    <div v-if="savedBatteries.length === 0" class="text-center py-8 text-gray-500">
+                        保存された蓄電池はありません。<br>メイン画面の「今の内容を保存」から追加してください。
+                    </div>
+                    <div v-else class="space-y-4">
+                        <div v-for="(bat, index) in savedBatteries" :key="index"
+                            class="border rounded-xl p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                            <div>
+                                <h4 class="font-bold text-gray-800">{{ bat.model }}</h4>
+                                <div class="text-xs text-gray-500 mt-1 flex gap-3">
+                                    <span>容量: {{ bat.effectiveCapacity }}kWh</span>
+                                    <span>出力: {{ bat.output }}kW</span>
+                                    <span>効率: {{ bat.efficiency }}%</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="applyBattery(bat)"
+                                    class="bg-primary hover:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors">適用する</button>
+                                <button @click="deleteBattery(index)"
+                                    class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">削除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plan Modal -->
+        <div v-if="showPlanModal" class="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+                <div class="p-6 border-b flex items-center justify-between">
+                    <h3 class="text-lg font-bold flex items-center gap-2">保存済みの料金プランリスト</h3>
+                    <div class="flex items-center gap-4">
+                        <label
+                            class="cursor-pointer bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                                </path>
+                            </svg>
+                            CSVインポート
+                            <input type="file" accept=".csv" @change="importPlanCSV" class="hidden">
+                        </label>
+                        <button @click="showPlanModal = false" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 overflow-y-auto flex-1">
+                    <div v-if="savedPlans.length === 0" class="text-center py-8 text-gray-500">
+                        保存されたプランはありません。<br>メイン画面の「プラン保存」から追加してください。
+                    </div>
+                    <div v-else class="space-y-4">
+                        <div v-for="(plan, index) in savedPlans" :key="index"
+                            class="border rounded-xl p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                            <div>
+                                <h4 class="font-bold text-gray-800">{{ plan.name }}</h4>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    {{ plan.rates.length }}つの時間帯設定 / 再エネ賦課金: {{ plan.renewableSurcharge }}円
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="applyPlan(plan)"
+                                    class="bg-primary hover:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors">適用する</button>
+                                <button @click="deletePlan(index)"
+                                    class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">削除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    inputs: {
+                        annualProduction: 5000,
+                        annualConsumption: 6000,
+                        sellPriceFirstPeriodYears: 4,
+                        sellPriceFirstPeriod: 24,
+                        sellPriceSecondPeriod: 8.3,
+                        inflationRate: 2.0,
+                        loanA: 15000,
+                        loanB: 13000,
+                        scenario: '1', // '1': 太陽光+蓄電池同時, '2': 蓄電池のみ追加
+                        pcsReplacementCost: 250000, // PCS交換費用（シナリオ2用）
+                        renewableSurcharge: 3.98, // 再エネ賦課金
+                        rates: [
+                            { name: '昼間', startHour: 7, endHour: 23, price: 42.6 },
+                            { name: '夜間', startHour: 23, endHour: 7, price: 31.64 }
+                        ],
+                        batteryA: {
+                            model: 'LUNA2000-4.95-14-N',
+                            effectiveCapacity: 13.4,
+                            output: 4.95,
+                            efficiency: 91.7,
+                            lifecycleCapacity: 78173,
+                            aiArbitrage: true
+                        },
+                        batteryB: {
+                            model: '12.7kWh蓄電池',
+                            effectiveCapacity: 10.9,
+                            output: 5,
+                            efficiency: 87.2,
+                            lifecycleCapacity: 54084,
+                            aiArbitrage: true
+                        }
+                    },
+                    activeTab: 'A',
+                    results: null,
+                    chartInstance: null,
+                    loanChartInstance: null,
+                    savedBatteries: [
+                        { model: 'LUNA2000-4.95-7-N', effectiveCapacity: 6.7, output: 3.5, efficiency: 91.7, lifecycleCapacity: 39086, aiArbitrage: true },
+                        { model: 'LUNA2000-4.95-21-N', effectiveCapacity: 20.1, output: 4.95, efficiency: 91.7, lifecycleCapacity: 117260, aiArbitrage: true }
+                    ],
+                    showBatteryModal: false,
+                    savedPlans: [
+                        {
+                            "name": "東京電力夜トク８",
+                            "rates": [
+                                {
+                                    "name": "昼間",
+                                    "startHour": 7,
+                                    "endHour": 23,
+                                    "price": 42.6,
+                                    "months": "all",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "夜間",
+                                    "startHour": 23,
+                                    "endHour": 7,
+                                    "price": 31.64,
+                                    "months": "all",
+                                    "dayType": "all"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "東京電力夜トク１２",
+                            "rates": [
+                                {
+                                    "name": "昼間",
+                                    "startHour": 9,
+                                    "endHour": 21,
+                                    "price": 44.16,
+                                    "months": "all",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "夜間",
+                                    "startHour": 21,
+                                    "endHour": 9,
+                                    "price": 33.33,
+                                    "months": "all",
+                                    "dayType": "all"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "関西電力はぴｅタイムＲ",
+                            "rates": [
+                                {
+                                    "name": "リビングタイム１",
+                                    "startHour": 7,
+                                    "endHour": 10,
+                                    "price": 22.8,
+                                    "months": "all",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "デイタイム夏季",
+                                    "startHour": 10,
+                                    "endHour": 17,
+                                    "price": 28.87,
+                                    "months": "7-9",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "デイタイムその他",
+                                    "startHour": 10,
+                                    "endHour": 17,
+                                    "price": 26.24,
+                                    "months": "10,11,12,1,2,3,4,5,6",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "リビングタイム２",
+                                    "startHour": 17,
+                                    "endHour": 23,
+                                    "price": 22.8,
+                                    "months": "all",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "ナイトタイム",
+                                    "startHour": 23,
+                                    "endHour": 7,
+                                    "price": 15.37,
+                                    "months": "all",
+                                    "dayType": "all"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "ほくでんエネとくスマートプラン",
+                            "rates": [
+                                {
+                                    "name": "日中",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 38.22,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "夜間・日祝",
+                                    "startHour": 0,
+                                    "endHour": 24,
+                                    "price": 29.44,
+                                    "months": "all",
+                                    "dayType": "休日"
+                                },
+                                {
+                                    "name": "夜間・日祝",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 29.44,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "東北電力よりそう＋スマートタイム",
+                            "rates": [
+                                {
+                                    "name": "平日昼間",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 36.86,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "休日・夜間",
+                                    "startHour": 0,
+                                    "endHour": 24,
+                                    "price": 29.86,
+                                    "months": "all",
+                                    "dayType": "休日"
+                                },
+                                {
+                                    "name": "休日・夜間",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 29.86,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "北陸電力くつろぎナイト１２",
+                            "rates": [
+                                {
+                                    "name": "昼間時間（夏季料金）",
+                                    "startHour": 8,
+                                    "endHour": 20,
+                                    "price": 39.87,
+                                    "months": "7-9",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "夜間時間",
+                                    "startHour": 20,
+                                    "endHour": 8,
+                                    "price": 39.87,
+                                    "months": "all",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "ウィークエンド時間",
+                                    "startHour": 20,
+                                    "endHour": 8,
+                                    "price": 33.8,
+                                    "months": "all",
+                                    "dayType": "休日"
+                                },
+                                {
+                                    "name": "昼間時間（その他季料金）",
+                                    "startHour": 8,
+                                    "endHour": 20,
+                                    "price": 39.87,
+                                    "months": "10,11,12,1,2,3,4,5,6",
+                                    "dayType": "平日"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "中部電力スマートライフプラン",
+                            "rates": [
+                                {
+                                    "name": "デイタイム",
+                                    "startHour": 10,
+                                    "endHour": 17,
+                                    "price": 38.8,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "アットホームタイム平日",
+                                    "startHour": 17,
+                                    "endHour": 22,
+                                    "price": 28.61,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "ナイトタイム平日",
+                                    "startHour": 22,
+                                    "endHour": 8,
+                                    "price": 16.52,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "アットホームタイム土日祝日",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 28.61,
+                                    "months": "all",
+                                    "dayType": "休日"
+                                },
+                                {
+                                    "name": "ナイトタイム土日祝日",
+                                    "startHour": 22,
+                                    "endHour": 8,
+                                    "price": 16.52,
+                                    "months": "all",
+                                    "dayType": "休日"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "中国電力電化Styleコース",
+                            "rates": [
+                                {
+                                    "name": "デイタイム夏季",
+                                    "startHour": 9,
+                                    "endHour": 21,
+                                    "price": 46.46,
+                                    "months": "7-9",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "デイタイムその他",
+                                    "startHour": 9,
+                                    "endHour": 21,
+                                    "price": 44.4,
+                                    "months": "10,11,12,1,2,3,4,5,6",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "ナイトタイム",
+                                    "startHour": 21,
+                                    "endHour": 9,
+                                    "price": 30.35,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "ホリデータイム",
+                                    "startHour": 0,
+                                    "endHour": 24,
+                                    "price": 30.35,
+                                    "months": "all",
+                                    "dayType": "休日"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "中国電力ナイトホリデーコース",
+                            "rates": [
+                                {
+                                    "name": "デイタイム夏季",
+                                    "startHour": 9,
+                                    "endHour": 21,
+                                    "price": 49.44,
+                                    "months": "7-9",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "デイタイムその他",
+                                    "startHour": 9,
+                                    "endHour": 21,
+                                    "price": 46.98,
+                                    "months": "10,11,12,1,2,3,4,5,6",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "ナイトタイム",
+                                    "startHour": 21,
+                                    "endHour": 9,
+                                    "price": 34.65,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "ホリデータイム",
+                                    "startHour": 0,
+                                    "endHour": 24,
+                                    "price": 34.65,
+                                    "months": "all",
+                                    "dayType": "休日"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "四国電力でんかeプラン",
+                            "rates": [
+                                {
+                                    "name": "平日昼間",
+                                    "startHour": 9,
+                                    "endHour": 23,
+                                    "price": 42.97,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "休日",
+                                    "startHour": 0,
+                                    "endHour": 24,
+                                    "price": 33.98,
+                                    "months": "all",
+                                    "dayType": "休日"
+                                },
+                                {
+                                    "name": "平日夜間",
+                                    "startHour": 23,
+                                    "endHour": 9,
+                                    "price": 33.98,
+                                    "months": "all",
+                                    "dayType": "平日"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "九州電力電化でナイト・セレクト",
+                            "rates": [
+                                {
+                                    "name": "平日昼間夏・冬",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 27.63,
+                                    "months": "1,2,7,8,9,12",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "平日昼間春・秋",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 24.74,
+                                    "months": "3,4,5,6,10,11",
+                                    "dayType": "平日"
+                                },
+                                {
+                                    "name": "夜間",
+                                    "startHour": 22,
+                                    "endHour": 8,
+                                    "price": 14.59,
+                                    "months": "all",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "休日昼間夏・冬",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 22.01,
+                                    "months": "1,2,7,8,9,12",
+                                    "dayType": "休日"
+                                },
+                                {
+                                    "name": "休日昼間春・秋",
+                                    "startHour": 8,
+                                    "endHour": 22,
+                                    "price": 18.61,
+                                    "months": "3,4,5,6,10,11",
+                                    "dayType": "休日"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        },
+                        {
+                            "name": "沖縄電力Eeスマート",
+                            "rates": [
+                                {
+                                    "name": "昼間時間",
+                                    "startHour": 7,
+                                    "endHour": 23,
+                                    "price": 45.32,
+                                    "months": "all",
+                                    "dayType": "all"
+                                },
+                                {
+                                    "name": "夜間時間",
+                                    "startHour": 23,
+                                    "endHour": 7,
+                                    "price": 34.77,
+                                    "months": "all",
+                                    "dayType": "all"
+                                }
+                            ],
+                            "renewableSurcharge": 3.98
+                        }
+                    ],
+                    showPlanModal: false,
+                    rateError: ''
+                }
+            },
+            computed: {
+                currentBattery: {
+                    get() { return this.activeTab === 'A' ? this.inputs.batteryA : this.inputs.batteryB; },
+                    set(val) { if (this.activeTab === 'A') this.inputs.batteryA = val; else this.inputs.batteryB = val; }
+                },
+                isValidA() { return this.isBatteryValid(this.inputs.batteryA); },
+                isValidB() { return this.isBatteryValid(this.inputs.batteryB); }
+            },
+            methods: {
+                isBatteryValid(bat) {
+                    if (!bat) return false;
+                    if (!bat.model || bat.model.toString().trim() === '') return false;
+                    if (typeof bat.effectiveCapacity !== 'number' || isNaN(bat.effectiveCapacity) || bat.effectiveCapacity <= 0) return false;
+                    if (typeof bat.output !== 'number' || isNaN(bat.output) || bat.output <= 0) return false;
+                    if (typeof bat.efficiency !== 'number' || isNaN(bat.efficiency) || bat.efficiency <= 0 || bat.efficiency > 100) return false;
+                    if (typeof bat.lifecycleCapacity !== 'number' || isNaN(bat.lifecycleCapacity) || bat.lifecycleCapacity <= 0) return false;
+                    return true;
+                },
+                formatNumber(num) { return Math.round(num).toLocaleString(); },
+                loadSavedData() {
+                    const savedBat = localStorage.getItem('savedBatteryList3');
+                    if (savedBat) {
+                        try { this.savedBatteries = JSON.parse(savedBat); } catch (e) { }
+                    } else {
+                        // localStorageに保存データがない場合は初期化としてデフォルト値を保存する
+                        localStorage.setItem('savedBatteryList3', JSON.stringify(this.savedBatteries));
+                    }
+                    const savedPl = localStorage.getItem('savedPlanList');
+                    if (savedPl) {
+                        try { let localPlans = JSON.parse(savedPl); for (let lp of localPlans) { if (!this.savedPlans.find(p => p.name === lp.name)) { this.savedPlans.push(lp); } } } catch (e) { }
+                    }
+                },
+                saveCurrentBattery() {
+                    const bat = JSON.parse(JSON.stringify(this.currentBattery));
+                    this.savedBatteries.push(bat);
+                    localStorage.setItem('savedBatteryList3', JSON.stringify(this.savedBatteries));
+                    alert(`「${bat.model}」をリストに保存しました！`);
+                },
+                applyBattery(bat) {
+                    if (this.activeTab === 'A') {
+                        this.inputs.batteryA = JSON.parse(JSON.stringify(bat));
+                    } else {
+                        this.inputs.batteryB = JSON.parse(JSON.stringify(bat));
+                    }
+                    this.showBatteryModal = false;
+                },
+                deleteBattery(index) {
+                    if (confirm('この蓄電池をリストから削除しますか？')) {
+                        this.savedBatteries.splice(index, 1);
+                        localStorage.setItem('savedBatteryList3', JSON.stringify(this.savedBatteries));
+                    }
+                },
+                importBatteryCSV(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const text = e.target.result;
+                        const lines = text.split(/\r?\n/);
+                        let importedCount = 0;
+
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (!line) continue;
+                            const cols = line.split(',');
+                            if (cols.length >= 5) {
+                                const effectiveCapacity = parseFloat(cols[1]);
+                                if (isNaN(effectiveCapacity)) continue; // skip header or invalid rows
+
+                                const model = cols[0].trim();
+                                const output = parseFloat(cols[2]);
+                                const efficiency = parseFloat(cols[3]);
+                                const lifecycleCapacity = parseFloat(cols[4]);
+
+                                let aiArbitrage = true;
+                                if (cols.length > 5 && cols[5]) {
+                                    const aiStr = cols[5].trim().toLowerCase();
+                                    aiArbitrage = !(aiStr === '0' || aiStr === 'false' || aiStr === 'なし');
+                                }
+
+                                const bat = { model, effectiveCapacity, output, efficiency, lifecycleCapacity, aiArbitrage };
+
+                                if (this.isBatteryValid(bat)) {
+                                    this.savedBatteries.push(bat);
+                                    importedCount++;
+                                }
+                            }
+                        }
+
+                        if (importedCount > 0) {
+                            localStorage.setItem('savedBatteryList3', JSON.stringify(this.savedBatteries));
+                            alert(`${importedCount}件の蓄電池データをインポートしました。`);
+                        } else {
+                            alert("有効な蓄電池データが見つかりませんでした。\nフォーマットをご確認ください。\n（モデル名, 実効容量[kWh], 出力[kW], 効率[%], サイクル容量[kWh], [AI活用]）");
+                        }
+                        event.target.value = ''; // Reset input
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                },
+                importPlanCSV(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        let text = e.target.result;
+                        text = text.replace(/^\uFEFF/, '');
+                        const lines = text.split(/\r?\n/);
+                        const plansMap = new Map();
+                        let importedCount = 0;
+
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (!line) continue;
+                            
+                            let cols = [];
+                            let inQuote = false;
+                            let currentToken = '';
+                            for (let j = 0; j < line.length; j++) {
+                                let char = line[j];
+                                if (char === '"') {
+                                    inQuote = !inQuote;
+                                } else if (char === ',' && !inQuote) {
+                                    cols.push(currentToken);
+                                    currentToken = '';
+                                } else {
+                                    currentToken += char;
+                                }
+                            }
+                            cols.push(currentToken);
+
+                            if (cols.length >= 5) {
+                                const price = parseFloat(cols[4]);
+                                if (isNaN(price)) continue; 
+
+                                const planName = cols[0].trim();
+                                if (!planName) continue;
+
+                                const rateName = cols[1].trim() || '時間帯';
+                                const startHour = parseInt(cols[2], 10);
+                                const endHour = parseInt(cols[3], 10);
+
+                                if (isNaN(startHour) || isNaN(endHour) || startHour < 0 || startHour > 23 || endHour < 1 || endHour > 24) continue;
+
+                                let surcharge = 3.98; 
+                                let months = 'all';
+                                let dayType = 'all';
+                                if (cols.length >= 6 && cols[5].trim() !== '') {
+                                    months = cols[5].trim();
+                                    if (months.match(/^(\d+)月(\d+)日$/)) {
+                                        months = months.replace(/^(\d+)月(\d+)日$/, '$1-$2');
+                                    }
+                                }
+                                if (cols.length >= 7 && cols[6].trim() !== '') dayType = cols[6].trim();
+
+                                if (cols.length >= 8 && cols[7].trim() !== '') {
+                                    const parsedSurcharge = parseFloat(cols[7]);
+                                    if (!isNaN(parsedSurcharge)) surcharge = parsedSurcharge;
+                                }
+
+                                if (!plansMap.has(planName)) {
+                                    plansMap.set(planName, {
+                                        name: planName,
+                                        rates: [],
+                                        renewableSurcharge: surcharge
+                                    });
+                                }
+
+                                const plan = plansMap.get(planName);
+                                plan.rates.push({
+                                    name: rateName,
+                                    startHour: startHour,
+                                    endHour: endHour,
+                                    price: price,
+                                    months: months,
+                                    dayType: dayType
+                                });
+                            }
+                        }
+
+                        for (const plan of plansMap.values()) {
+                            if (plan.rates.length > 0) {
+                                this.savedPlans.push(plan);
+                                importedCount++;
+                            }
+                        }
+
+                        if (importedCount > 0) {
+                            localStorage.setItem('savedPlanList', JSON.stringify(this.savedPlans));
+                            alert(`${importedCount}件のプランデータをインポートしました。`);
+                        } else {
+                            alert("有効なプランデータが見つかりませんでした。\nフォーマットをご確認ください。");
+                        }
+                        event.target.value = '';
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                },
+                addRate() {
+                    this.inputs.rates.push({ name: '新規時間帯', startHour: 10, endHour: 15, price: 30 });
+                    this.validateRates();
+                },
+                removeRate(index) {
+                    this.inputs.rates.splice(index, 1);
+                    this.validateRates();
+                },
+
+                saveCurrentPlan() {
+                    if (this.rateError) {
+                        alert("料金設定にエラーがある状態では保存できません。");
+                        return;
+                    }
+                    const name = prompt("保存するプラン名を入力してください", "新しいプラン");
+                    if (!name) return;
+
+                    const plan = {
+                        name: name,
+                        rates: JSON.parse(JSON.stringify(this.inputs.rates)),
+                        renewableSurcharge: this.inputs.renewableSurcharge
+                    };
+                    this.savedPlans.push(plan);
+                    localStorage.setItem('savedPlanList', JSON.stringify(this.savedPlans));
+                    alert(`「${name}」を保存しました！`);
+                },
+                applyPlan(plan) {
+                    this.inputs.rates = JSON.parse(JSON.stringify(plan.rates));
+                    this.inputs.renewableSurcharge = plan.renewableSurcharge;
+                    this.showPlanModal = false;
+                    this.validateRates();
+                },
+                deletePlan(index) {
+                    if (confirm('このプランをリストから削除しますか？')) {
+                        this.savedPlans.splice(index, 1);
+                        localStorage.setItem('savedPlanList', JSON.stringify(this.savedPlans));
+                    }
+                },
+
+                validateRates() {
+                    this.rateError = '';
+                    let hasAdvancedCriteria = this.inputs.rates.some(r => 
+                        (r.months && r.months !== 'all') || 
+                        (r.dayType && r.dayType !== 'all' && r.dayType !== 'すべて')
+                    );
+                    if (hasAdvancedCriteria) {
+                        return; // 高度なプラン（季節・曜日別）の場合は単純な24時間重複チェックをスキップ
+                    }
+
+                    let coverage = new Array(24).fill(0);
+
+                    for (let rate of this.inputs.rates) {
+                        if (rate.startHour === rate.endHour) continue;
+
+                        let h = rate.startHour;
+                        while (h !== rate.endHour) {
+                            coverage[h]++;
+                            h = (h + 1) % 24;
+                        }
+                    }
+
+                    let overlaps = [];
+                    let missing = [];
+                    for (let i = 0; i < 24; i++) {
+                        if (coverage[i] > 1) overlaps.push(`${i}:00~${i + 1}:00`);
+                        if (coverage[i] === 0) missing.push(`${i}:00~${i + 1}:00`);
+                    }
+
+                    if (overlaps.length > 0) {
+                        this.rateError = `時間が重複しています。正しく計算できません: ${overlaps.slice(0, 3).join(', ')}${overlaps.length > 3 ? '...' : ''}`;
+                    } else if (missing.length > 0) {
+                        this.rateError = `時間が設定されていない空白の帯域があります: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? '...' : ''}`;
+                    }
+                },
+
+                getPriceForHour(hour, yearIndex, month, isDayOff) {
+                    let matchingRate = this.inputs.rates.find(rate => {
+                        let okMonth = true;
+                        if (rate.months && rate.months !== 'all') {
+                            const mStr = String(rate.months).replace('月', ''); 
+                            if (mStr.includes('-')) {
+                                let parts = mStr.split('-');
+                                let sm = parseInt(parts[0], 10);
+                                let em = parseInt(parts[1], 10);
+                                // 日付またぎ(例:11-3)を考慮
+                                if (sm <= em) {
+                                    okMonth = (month >= sm && month <= em);
+                                } else {
+                                    okMonth = (month >= sm || month <= em);
+                                }
+                            } else if (mStr.includes('夏')) {
+                                okMonth = (month >= 7 && month <= 9);
+                            } else if (mStr.includes('冬')) {
+                                okMonth = (month === 12 || month <= 2);
+                            } else {
+                                okMonth = mStr.split(/[,、]/).map(s=>parseInt(s.trim())).includes(month);
+                            }
+                        }
+                        if (!okMonth) return false;
+
+                        let okDay = true;
+                        if (rate.dayType && rate.dayType !== 'all' && rate.dayType !== 'すべて') {
+                            if (rate.dayType.includes('平日') && isDayOff) okDay = false;
+                            if ((rate.dayType.includes('休日') || rate.dayType.includes('土日祝')) && !isDayOff) okDay = false;
+                        }
+                        if (!okDay) return false;
+
+                        if (rate.startHour <= rate.endHour) return hour >= rate.startHour && hour < rate.endHour;
+                        else return hour >= rate.startHour || hour < rate.endHour;
+                    });
+                    
+                    let basePrice = matchingRate ? matchingRate.price : 30;
+                    let inflatedPrice = basePrice * Math.pow(1 + (this.inputs.inflationRate / 100), yearIndex);
+                    return inflatedPrice + this.inputs.renewableSurcharge;
+                },
+
+                getLowestPrice(yearIndex, month, isDayOff) {
+                    let minPrice = 999;
+                    for (let h = 0; h < 24; h++) {
+                        let p = this.getPriceForHour(h, yearIndex, month, isDayOff);
+                        if (p < minPrice) minPrice = p;
+                    }
+                    return minPrice;
+                },
+
+                getHighestPrice(yearIndex, month, isDayOff) {
+                    let maxPrice = 0;
+                    for (let h = 0; h < 24; h++) {
+                        let p = this.getPriceForHour(h, yearIndex, month, isDayOff);
+                        if (p > maxPrice) maxPrice = p;
+                    }
+                    return maxPrice;
+                },
+
+                runSimulation(batteryObj) {
+                    const dailyProd = this.inputs.annualProduction / 365;
+                    const dailyCons = this.inputs.annualConsumption / 365;
+                    const eff = (batteryObj ? (batteryObj.efficiency || 100) / 100 : 1.0);
+                    const maxCapOriginal = batteryObj ? (batteryObj.effectiveCapacity || 0) : 0;
+                    const maxOut = batteryObj ? (batteryObj.output || 999) : 0;
+                    const lifecycleLimit = batteryObj ? (batteryObj.lifecycleCapacity || 9999999) : 9999999;
+                    const hasAiArbitrage = batteryObj ? batteryObj.aiArbitrage : false;
+
+                    let yearlyData = [];
+                    let totalDischargedKwh = 0;
+                    let deathYear = null;
+
+                    for (let year = 1; year <= 15; year++) {
+                        let maxCapThisYear = (totalDischargedKwh >= lifecycleLimit) ? 0 : maxCapOriginal;
+                        if (maxCapThisYear === 0 && deathYear === null) {
+                            deathYear = year;
+                        }
+
+                        let annualGridCostStandard = 0;
+                        let annualSoldStandardKwh = 0;
+                        let annualGridCostNoSolarNoBattery = 0;
+                        let annualBatteryConsumed = 0;
+                        let arbitrageBonusCostReduction = 0;
+                        let arbitrageDischargedKwh = 0;
+                        let batteryLevel = 0;
+
+                        // 各月の日数と休日数の目安 (土日祝 + お盆年末年始などを加味し 年間120日休日想定)
+                        const monthData = [
+                            { m: 1, days: 31, off: 12 },
+                            { m: 2, days: 28, off: 10 },
+                            { m: 3, days: 31, off: 10 },
+                            { m: 4, days: 30, off: 10 },
+                            { m: 5, days: 31, off: 13 },
+                            { m: 6, days: 30, off: 8 },
+                            { m: 7, days: 31, off: 10 },
+                            { m: 8, days: 31, off: 11 },
+                            { m: 9, days: 30, off: 10 },
+                            { m: 10, days: 31, off: 10 },
+                            { m: 11, days: 30, off: 10 },
+                            { m: 12, days: 31, off: 10 }
+                        ];
+
+                        for (let md of monthData) {
+                            let month = md.m;
+                            let offDays = md.off;
+                            let workDays = md.days - offDays;
+
+                            for (let isOff of [false, true]) {
+                                let daysCount = isOff ? offDays : workDays;
+                                if (daysCount <= 0) continue;
+
+                                let dailyGridCost = 0;
+                                let dailySold = 0;
+                                let dailyBatteryConsumed = 0;
+                                let dailyGridCostNoSolarNoBattery = 0;
+
+                                // 安定化のために2日回して2日目を採用
+                                let tempBatteryLevel = batteryLevel;
+                                for (let d = 0; d < 2; d++) {
+                                    if (d === 1) { 
+                                        dailyGridCost = 0; 
+                                        dailySold = 0; 
+                                        dailyBatteryConsumed = 0; 
+                                        dailyGridCostNoSolarNoBattery = 0;
+                                    }
+
+                                    for (let h = 0; h < 24; h++) {
+                                        let load_h = 0;
+                                        if (h < 8) load_h = (dailyCons * 0.2) / 8;
+                                        else if (h < 16) load_h = (dailyCons * 0.4) / 8;
+                                        else load_h = (dailyCons * 0.4) / 8;
+
+                                        let yield_h = (h >= 8 && h < 16) ? dailyProd / 8 : 0;
+                                        const price_h = this.getPriceForHour(h, year - 1, month, isOff);
+
+                                        if (yield_h >= load_h) {
+                                            let excess = yield_h - load_h;
+                                            let chargeSpace = Math.max(0, maxCapThisYear - tempBatteryLevel);
+                                            let chargeAmount = Math.min(excess, maxOut, chargeSpace);
+                                            tempBatteryLevel += chargeAmount * eff;
+                                            let soldAmount = excess - chargeAmount;
+                                            if (d === 1) dailySold += soldAmount;
+                                        } else {
+                                            let shortage = load_h - yield_h;
+                                            let dischargeAmount = Math.min(shortage, maxOut, tempBatteryLevel);
+                                            tempBatteryLevel -= dischargeAmount;
+                                            if (d === 1) dailyBatteryConsumed += dischargeAmount;
+                                            let gridBuyAmount = shortage - dischargeAmount;
+                                            if (d === 1) dailyGridCost += gridBuyAmount * price_h;
+                                        }
+                                        if (d === 1 && !batteryObj) {
+                                            dailyGridCostNoSolarNoBattery += load_h * price_h;
+                                        }
+                                    }
+                                }
+                                batteryLevel = tempBatteryLevel;
+
+                                annualGridCostStandard += dailyGridCost * daysCount;
+                                annualSoldStandardKwh += dailySold * daysCount;
+                                annualGridCostNoSolarNoBattery += dailyGridCostNoSolarNoBattery * daysCount;
+                                annualBatteryConsumed += dailyBatteryConsumed * daysCount;
+
+                                // アービトラージ計算 (年間約100日想定 -> 各月に按分)
+                                if (hasAiArbitrage && maxCapThisYear > 0) {
+                                    let lowest = this.getLowestPrice(year - 1, month, isOff);
+                                    let highest = this.getHighestPrice(year - 1, month, isOff);
+                                    if (highest > lowest) {
+                                        // 全体の稼働日割合で按分（年間100日が12ヶ月に平準化される想定）
+                                        let arbitrageDays = (daysCount / 365) * 100;
+                                        let chargeVolume = maxCapThisYear;
+                                        let extraNightCost = (chargeVolume / eff) * lowest;
+                                        let savedDayCost = chargeVolume * highest;
+
+                                        let dailyArbitrageProfit = savedDayCost - extraNightCost;
+                                        if (dailyArbitrageProfit > 0) {
+                                            arbitrageBonusCostReduction += dailyArbitrageProfit * arbitrageDays;
+                                            arbitrageDischargedKwh += chargeVolume * arbitrageDays;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        const finalGridCost = Math.max(0, annualGridCostStandard - arbitrageBonusCostReduction);
+                        const finalDischargedKwh = annualBatteryConsumed + arbitrageDischargedKwh;
+
+                        let sellPrice = year <= this.inputs.sellPriceFirstPeriodYears ? this.inputs.sellPriceFirstPeriod : this.inputs.sellPriceSecondPeriod;
+                        let finalSoldRevenue = annualSoldStandardKwh * sellPrice;
+
+                        totalDischargedKwh += finalDischargedKwh;
+
+                        yearlyData.push({
+                            year: year,
+                            gridCost: finalGridCost,
+                            soldRevenue: finalSoldRevenue,
+                            dischargedKwh: finalDischargedKwh,
+                            gridCostNoSolarNoBattery: annualGridCostNoSolarNoBattery
+                        });
+                    }
+
+                    return { yearlyData: yearlyData, deathYear: deathYear };
+                },
+
+                calculateSimulation() {
+                    this.validateRates();
+                    if (this.rateError) {
+                        alert("料金設定にエラーがあります。\n" + this.rateError);
+                        return; // エラー時は計算しない
+                    }
+
+                    const baseline = this.runSimulation(null);
+                    const simA = this.runSimulation(this.inputs.batteryA);
+                    const simB = this.runSimulation(this.inputs.batteryB);
+
+                    let totalDischargedA = simA.yearlyData.reduce((sum, d) => sum + d.dischargedKwh, 0);
+                    let totalDischargedB = simB.yearlyData.reduce((sum, d) => sum + d.dischargedKwh, 0);
+
+                    let resA = { yearlyPureAcc: [], batteryPureBenefit15Y: 0, year1Saving: 0, deathYear: simA.deathYear, remainingCapacity: Math.max(0, this.inputs.batteryA.lifecycleCapacity - totalDischargedA), remainingBenefit: 0 };
+                    let resB = { yearlyPureAcc: [], batteryPureBenefit15Y: 0, year1Saving: 0, deathYear: simB.deathYear, remainingCapacity: Math.max(0, this.inputs.batteryB.lifecycleCapacity - totalDischargedB), remainingBenefit: 0 };
+
+                    let accPureA = 0; let accPureB = 0;
+                    let baselineCost15Y = 0;
+
+                    for (let i = 0; i < 15; i++) {
+                        let baseGridCost = 0;
+                        let baseSoldRev = 0;
+
+                        if (this.inputs.scenario === '1') {
+                            // シナリオ1：太陽光＋蓄電池（ベースは何も導入していない全体の買電額）
+                            baseGridCost = baseline.yearlyData[i].gridCostNoSolarNoBattery;
+                            baseSoldRev = 0; // 何も導入してないなら売電も0
+                        } else {
+                            // シナリオ2：蓄電池後付け（ベースは太陽光のみある状態）
+                            baseGridCost = baseline.yearlyData[i].gridCost;
+                            baseSoldRev = baseline.yearlyData[i].soldRevenue;
+                        }
+
+                        baselineCost15Y += baseGridCost;
+
+                        let pureBatteryProfitA = 0;
+                        let pureBatteryProfitB = 0;
+                        let gridSavingsA = 0;
+                        let gridSavingsB = 0;
+
+                        if (this.inputs.scenario === '1') {
+                            // メリット ＝ （元々払うはずだった電気代） － （太陽光＋蓄電池導入後の電気代） ＋ （売電収入）
+                            gridSavingsA = baseGridCost - simA.yearlyData[i].gridCost;
+                            pureBatteryProfitA = gridSavingsA + simA.yearlyData[i].soldRevenue;
+
+                            gridSavingsB = baseGridCost - simB.yearlyData[i].gridCost;
+                            pureBatteryProfitB = gridSavingsB + simB.yearlyData[i].soldRevenue;
+                        } else {
+                            // メリット ＝ （太陽光のみの電気代 － 蓄電池ありの電気代） － （太陽光のみの売電 － 蓄電池ありの売電）
+                            gridSavingsA = baseGridCost - simA.yearlyData[i].gridCost;
+                            let soldLossA = (baseSoldRev || 0) - (simA.yearlyData[i].soldRevenue || 0);
+                            pureBatteryProfitA = gridSavingsA - soldLossA;
+
+                            gridSavingsB = baseGridCost - simB.yearlyData[i].gridCost;
+                            let soldLossB = (baseSoldRev || 0) - (simB.yearlyData[i].soldRevenue || 0);
+                            pureBatteryProfitB = gridSavingsB - soldLossB;
+
+                            // 10年目にPCS交換費用のメリットを加算（シナリオ2のみ）
+                            if (i === 9 && this.inputs.pcsReplacementCost > 0) {
+                                pureBatteryProfitA += this.inputs.pcsReplacementCost;
+                                pureBatteryProfitB += this.inputs.pcsReplacementCost;
+                            }
+                        }
+
+                        accPureA += pureBatteryProfitA;
+                        resA.yearlyPureAcc.push(accPureA);
+                        resA.batteryPureBenefit15Y += pureBatteryProfitA;
+
+                        if (i === 0) resA.year1Saving = gridSavingsA;
+
+                        accPureB += pureBatteryProfitB;
+                        resB.yearlyPureAcc.push(accPureB);
+                        resB.batteryPureBenefit15Y += pureBatteryProfitB;
+
+                        if (i === 0) resB.year1Saving = gridSavingsB;
+                    }
+
+                    if (totalDischargedA > 0 && !simA.deathYear) {
+                        let benefitPerKwhA = resA.batteryPureBenefit15Y / totalDischargedA;
+                        resA.remainingBenefit = Math.floor(benefitPerKwhA * resA.remainingCapacity);
+                    }
+                    if (totalDischargedB > 0 && !simB.deathYear) {
+                        let benefitPerKwhB = resB.batteryPureBenefit15Y / totalDischargedB;
+                        resB.remainingBenefit = Math.floor(benefitPerKwhB * resB.remainingCapacity);
+                    }
+
+                    this.results = {
+                        A: resA, B: resB,
+                        baselineCost15Y: baselineCost15Y,
+                        baselineYear1MonthlyGrid: baseline.yearlyData[0].gridCost / 12,
+                        year1MonthlyGridA: simA.yearlyData[0].gridCost / 12,
+                        year1MonthlyGridB: simB.yearlyData[0].gridCost / 12,
+                        baselineYear15MonthlyGrid: baseline.yearlyData[14].gridCost / 12,
+                        year15MonthlyGridA: simA.yearlyData[14].gridCost / 12,
+                        year15MonthlyGridB: simB.yearlyData[14].gridCost / 12
+                    };
+
+                    this.$nextTick(() => {
+                        this.renderChart();
+                        if (this.inputs.loanA > 0 || this.inputs.loanB > 0) {
+                            this.renderLoanChart();
+                        }
+                    });
+                },
+
+                renderChart() {
+                    if (this.chartInstance) this.chartInstance.destroy();
+                    const ctx = document.getElementById('compareChart').getContext('2d');
+
+                    this.chartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: Array.from({ length: 15 }, (_, i) => (i + 1) + '年目'),
+                            datasets: [
+                                ...(this.isValidA ? [{ label: `【蓄電池A】 ${this.inputs.batteryA.model}`, data: this.results.A.yearlyPureAcc, backgroundColor: Array.from({ length: 15 }, (_, i) => (this.results.A.deathYear && (i + 1) >= this.results.A.deathYear) ? '#cbd5e1' : '#3b82f6'), borderRadius: 4 }] : []),
+                                ...(this.isValidB ? [{ label: `【蓄電池B】 ${this.inputs.batteryB.model}`, data: this.results.B.yearlyPureAcc, backgroundColor: Array.from({ length: 15 }, (_, i) => (this.results.B.deathYear && (i + 1) >= this.results.B.deathYear) ? '#cbd5e1' : '#f59e0b'), borderRadius: 4 }] : [])
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                datalabels: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            let label = context.dataset.label;
+                                            let isDeadA = context.datasetIndex === 0 && this.results.A.deathYear && (context.dataIndex + 1) >= this.results.A.deathYear;
+                                            let isDeadB = context.datasetIndex === 1 && this.results.B.deathYear && (context.dataIndex + 1) >= this.results.B.deathYear;
+                                            if (isDeadA || isDeadB) {
+                                                label += ' (システム寿命到達)';
+                                            }
+                                            return label + ': ' + Math.round(context.parsed.y).toLocaleString() + '円';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: { y: { ticks: { callback: function (value) { return value.toLocaleString() + '円'; } } } }
+                        }
+                    });
+                },
+
+                renderLoanChart() {
+                    if (this.loanChartInstance) this.loanChartInstance.destroy();
+                    let chartEl = document.getElementById('loanChart');
+                    if (!chartEl) return;
+                    const ctx = chartEl.getContext('2d');
+
+                    let chartLabels = ['1年目', '15年目'];
+                    let datasets = [];
+
+                    // 太陽光のみ (電池なし)
+                    datasets.push({
+                        label: '太陽光のみ（残りの電気代）',
+                        data: [this.results.baselineYear1MonthlyGrid, this.results.baselineYear15MonthlyGrid],
+                        backgroundColor: '#94a3b8', // Gray
+                        stack: 'Baseline'
+                    });
+
+                    // 蓄電池A
+                    if (this.isValidA && this.inputs.loanA > 0) {
+                        datasets.push({
+                            label: '【電池A】導入後（残りの電気代）',
+                            data: [this.results.year1MonthlyGridA, this.results.year15MonthlyGridA],
+                            backgroundColor: ['#93c5fd', (this.results.A.deathYear && this.results.A.deathYear <= 15) ? '#cbd5e1' : '#93c5fd'],
+                            stack: 'Battery A'
+                        });
+                        datasets.push({
+                            label: '【電池A】導入後（ローン等返済）',
+                            data: [this.inputs.loanA, 0], // ローンは15年後には0になると仮定
+                            backgroundColor: '#3b82f6', // Blue
+                            stack: 'Battery A'
+                        });
+                    }
+
+                    // 蓄電池B
+                    if (this.isValidB && this.inputs.loanB > 0) {
+                        datasets.push({
+                            label: '【電池B】導入後（残りの電気代）',
+                            data: [this.results.year1MonthlyGridB, this.results.year15MonthlyGridB],
+                            backgroundColor: ['#fcd34d', (this.results.B.deathYear && this.results.B.deathYear <= 15) ? '#cbd5e1' : '#fcd34d'],
+                            stack: 'Battery B'
+                        });
+                        datasets.push({
+                            label: '【電池B】導入後（ローン等返済）',
+                            data: [this.inputs.loanB, 0], // ローンは15年後には0になると仮定
+                            backgroundColor: '#f59e0b', // Amber
+                            stack: 'Battery B'
+                        });
+                    }
+
+                    this.loanChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: chartLabels,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: {
+                                datalabels: {
+                                    color: '#1e293b',
+                                    font: { weight: 'bold', size: 14 },
+                                    formatter: function (value) {
+                                        return value > 0 ? Math.round(value).toLocaleString() : '';
+                                    }
+                                },
+                                title: { display: true, text: '導入前と導入後の「月々の家計の出費（1年目 vs 15年目）」比較', font: { size: 14 } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            let label = context.dataset.label;
+                                            if (context.dataIndex === 1) {
+                                                if (context.dataset.stack === 'Battery A' && this.results.A.deathYear && this.results.A.deathYear <= 15) {
+                                                    label += ' (システム寿命到達)';
+                                                }
+                                                if (context.dataset.stack === 'Battery B' && this.results.B.deathYear && this.results.B.deathYear <= 15) {
+                                                    label += ' (システム寿命到達)';
+                                                }
+                                            }
+                                            return label + ': ' + Math.round(context.parsed.y).toLocaleString() + '円/月';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: { stacked: true },
+                                y: { stacked: true, title: { display: true, text: '月々の総負担額 (円)' }, ticks: { callback: function (value) { return value.toLocaleString() + '円'; } } }
+                            }
+                        }
+                    });
+                }
+            },
+            mounted() {
+                this.loadSavedData();
+                this.validateRates();
+                this.calculateSimulation();
+            }
+        }).mount('#app')
+    </script>
+</body>
+
+</html>

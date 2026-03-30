@@ -1,0 +1,17 @@
+node_modules/
+.env
+.DS_Store
+
+# Scratch files
+err.txt
+error.log
+out.txt
+syntax_error.txt
+output/
+temp_scripts/
+fix*.js
+temp_plans.json
+inject_plans.js
+repair.js
+check.js
+repl.js
