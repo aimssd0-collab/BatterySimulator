@@ -138,13 +138,346 @@
                 max-height: 300px !important;
             }
         }
+
+        /* 性能表示ラベル解説用の背景とカード */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+        }
+
+        .hero-gradient {
+            background: radial-gradient(circle at 10% 20%, rgba(0, 85, 255, 0.08) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 45%);
+        }
     </style>
 </head>
 
 <body>
-    <div id="app" v-cloak class="min-h-screen pb-20">
-        <!-- Header -->
-        <header class="bg-dark text-white shadow-lg sticky top-0 z-50">
+    <div id="app" v-cloak class="min-h-screen">
+        <!-- [View 1] 性能表示ラベル解説画面 -->
+        <div v-if="currentView === 'label'" class="hero-gradient min-h-screen font-sans antialiased pb-20 px-4 sm:px-6">
+            <div class="max-w-4xl mx-auto">
+                <!-- Navigation / Header -->
+                <header class="flex items-center justify-between py-6 mb-8 border-b border-slate-200/60 no-print">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-white font-black text-sm">JIS</div>
+                        <span class="font-extrabold text-slate-800 tracking-tight text-lg">蓄電池「真の性能」読本</span>
+                    </div>
+                    <button @click="switchView('simulator')" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-accent transition duration-200 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                        シミュレーターを始める
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3.5 h-3.5 text-slate-400">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </header>
+
+                <!-- Main Content -->
+                <main>
+                    <!-- Top Banner Image -->
+                    <div class="mb-8 overflow-hidden rounded-3xl border border-slate-200/80 shadow-md bg-white">
+                        <img src="performance_label_top.png" alt="蓄電システムは正しく比較する時代" class="w-full h-auto object-cover">
+                    </div>
+
+                    <!-- Hero Banner -->
+                    <section class="text-center py-10 sm:py-16">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.2 rounded-full text-xs font-bold bg-accent/10 text-accent mb-4">
+                            💡 カタログスペックの誤解を解く
+                        </span>
+                        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 leading-tight tracking-tight mb-6">
+                            カタログの「<span class="text-rose-500 line-through">12,000サイクル</span>」に<br class="hidden sm:inline">隠された真実とは？
+                        </h1>
+                        <p class="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                            蓄電池を選ぶ際、多くの人が「サイクル数」の大きさに目を奪われます。しかし、そこには実際の使用環境とはかけ離れた測定条件が隠されています。国が定めた公式な基準から「本当にタフな蓄電池」を見分ける方法を解説します。
+                        </p>
+                    </section>
+
+                    <!-- Section 1: 5 Points in Label -->
+                    <section class="glass-card rounded-3xl p-6 sm:p-10 mb-8 bg-white">
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-6 flex items-center gap-3">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-950 text-white text-sm">1</span>
+                            性能表示ラベルで見るべき「5つのチェックポイント」
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Card 1 -->
+                            <div class="bg-white border border-slate-200/60 rounded-2xl p-5 hover:shadow-md transition-all duration-300">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 text-accent font-black text-sm">01</span>
+                                    <h3 class="font-extrabold text-slate-800 text-sm sm:text-base">初期実効容量と利用率</h3>
+                                </div>
+                                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                                    カタログの一番大きな文字で書かれている「公称容量（例: 9.8kWh）」は、電池セルの限界値です。実際に家庭で安全に充放電できるのは、性能表示ラベルに書かれた<b>「初期実効容量」</b>であり、この数値が大きいほど、実際に使える電気量が多くなります。
+                                </p>
+                            </div>
+
+                            <!-- Card 2 -->
+                            <div class="bg-white border border-slate-200/60 rounded-2xl p-5 hover:shadow-md transition-all duration-300">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 text-accent font-black text-sm">02</span>
+                                    <h3 class="font-extrabold text-slate-800 text-sm sm:text-base">充放電効率</h3>
+                                </div>
+                                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                                    電気を充電・放電する際、システム全体で必ず数％〜十数％の「変換ロス（熱としての逃げ）」が生じます。効率の高い蓄電池ほど、太陽光で創った貴重な電気を無駄なく家の中に活用でき、長期的な経済メリットが大きくなります。
+                                </p>
+                            </div>
+
+                            <!-- Card 3 -->
+                            <div class="bg-white border border-slate-200/60 rounded-2xl p-5 hover:shadow-md transition-all duration-300">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 text-accent font-black text-sm">03</span>
+                                    <h3 class="font-extrabold text-slate-800 text-sm sm:text-base">運転音（静音性）</h3>
+                                </div>
+                                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                                    蓄電池は夜間も深夜電力を充電するために作動します。特に静音性に優れた製品は<b>「29dB（デシベル）」</b>以下と非常に静かです。これは木の葉が触れ合う音や深夜の郊外並みの静けさで、近隣との騒音トラブルを防ぎます。
+                                </p>
+                            </div>
+
+                            <!-- Card 4 -->
+                            <div class="bg-white border border-slate-200/60 rounded-2xl p-5 hover:shadow-md transition-all duration-300">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 text-accent font-black text-sm">04</span>
+                                    <h3 class="font-extrabold text-slate-800 text-sm sm:text-base">防塵・防水性能（IP規格）</h3>
+                                </div>
+                                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                                    屋外に15年以上設置される蓄電池は、台風、豪雨、黄砂などの過酷な自然環境にさらされます。<b>「IP66」</b>などの極めて高い防塵・防水規格をクリアしている製品は、激しい風雨や水しぶきを受けても内部に一切浸入させず、故障を防ぎます。
+                                </p>
+                            </div>
+
+                            <!-- Card 5 -->
+                            <div class="bg-white border border-slate-200/60 rounded-2xl p-5 hover:shadow-md transition-all duration-300 md:col-span-2">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 text-accent font-black text-sm">05</span>
+                                    <h3 class="font-extrabold text-slate-800 text-sm sm:text-base">スマホ連携とスマートエネルギー管理</h3>
+                                </div>
+                                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                                    現在の「発電量・蓄電量・自家消費比率」などを手元のスマホアプリでリアルタイムに確認・管理できる機能も極めて重要です。AIが翌日の天気予報と連動して自動で充放電計画を立てるようなスマート管理ができることで、意識せずに電気代削減や防災対策が最適化されます。
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section 2: The Truth behind Cycle count -->
+                    <section class="glass-card rounded-3xl p-6 sm:p-10 mb-8 bg-white">
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-6 flex items-center gap-3">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-950 text-white text-sm">2</span>
+                            なぜカタログの「サイクル数」はあてにならないのか？
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                            <div class="bg-rose-50/50 border border-rose-100/80 rounded-2xl p-5">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-rose-500 font-bold text-sm">⚠️ カタログの表記（一部製品）</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-900 mb-2">「12,000サイクル」などの大きな数字</h3>
+                                <p class="text-sm text-slate-600 leading-relaxed">
+                                    これらは、<b>「特定の好条件下（室温25℃の一定温度）」</b>かつ<b>「バッテリーセル（単体）のみ」</b>で,さらに<b>「放電する深さを浅く制限（例：容量の50%だけ充放電するなど）」</b>して測定された実験データであることがほとんどです。<br>
+                                    実際の住宅のように、夏は暑く冬は凍える屋外環境で、システム全体を毎日フルに動かす現実の負荷は一切考慮されていません。
+                                </p>
+                            </div>
+
+                            <div class="bg-emerald-50/50 border border-emerald-100/80 rounded-2xl p-5">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-emerald-600 font-bold text-sm">✨ 国が定めた「性能表示ラベル」</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-900 mb-2">JIS規格に基づいた「現実的」な表記</h3>
+                                <p class="text-sm text-slate-600 leading-relaxed">
+                                    日本産業規格（JIS C 4413）の基準に則り、JIS C 4414に基づいて記載される「性能表示ラベル」は、セル単体ではなく、電気をコントロールするパワコンや冷却ファンなどを含めた<b>「家庭用蓄電池システム全体」</b>として測定されます。<br>
+                                    また、電池が徐々に劣化していく<b>「リアルな劣化カーブ（経年劣化）」</b>を完全に計算に組み込んでいるため、実際に家で毎日使い続けた場合の大変現実的な性能を示しています。
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex gap-3 text-xs text-slate-500">
+                            <span class="text-lg">💡</span>
+                            <p class="leading-relaxed">
+                                スマホのバッテリーが2〜3年で急激に持ちが悪くなるのに対し、住宅用蓄電池は<b>「15年、20年と毎日ガシガシ使い続けられる耐久性」</b>が求められます。だからこそ、一部メーカーの実験室データではなく、国が統一基準として定めた「性能表示ラベル」での比較が不可欠なのです。
+                            </p>
+                        </div>
+                    </section>
+
+                    <!-- Section 3: The Magic Formula "4,562" -->
+                    <section class="glass-card rounded-3xl p-6 sm:p-10 mb-8 bg-white">
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-2 flex items-center gap-3">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-950 text-white text-sm">3</span>
+                            真の長寿命を見分ける魔法の数字「4,562」とは？
+                        </h2>
+                        <p class="text-xs text-slate-500 mb-6 ml-11">プロが蓄電池の耐久性を評価する公式な計算式があります。</p>
+
+                        <div class="bg-gradient-to-r from-accent/5 to-accent/10 border-2 border-accent rounded-3xl p-6 text-center mb-8">
+                            <p class="text-xs font-bold text-accent mb-2 uppercase tracking-widest">国（JIS規格）が定めた、真のタフさの基準式</p>
+                            <div class="text-xl sm:text-2xl font-black text-slate-900 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 my-3">
+                                <span class="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200/60">システム生涯蓄電容量 (kWh)</span>
+                                <span class="text-accent">➗</span>
+                                <span class="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200/60">初期実効容量 (kWh)</span>
+                                <span class="text-accent">≧</span>
+                                <span class="bg-accent text-white px-5 py-2.5 rounded-xl shadow-md border-b-4 border-accentHover text-3xl font-black">4,562</span>
+                            </div>
+                            <p class="text-xs text-slate-600 mt-3 font-medium">※生涯蓄電容量を初期の実効容量で割ることで、「初期の満タン状態で、実質何回分使い倒せるか」が分かります。</p>
+                        </div>
+
+                        <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5 text-accent">
+                                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            なぜ「4,562」という数字なのか？（その具体的な計算根拠）
+                        </h3>
+
+                        <div class="space-y-4 text-sm text-slate-600 leading-relaxed mb-6">
+                            <p>
+                                家庭用蓄電池は、太陽光で発電した電気を貯めるだけでなく、夜間の安い深夜電力をいっぱいに充電して朝・夕方に使うといった、毎日繰り返す過酷な運転を行います。そのため、一般的に<b>「15年間の保証・稼働」</b>をクリアするように設計されます。
+                            </p>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+                                <div class="bg-slate-50 border border-slate-200/60 p-4 rounded-xl text-center">
+                                    <span class="text-xs text-slate-500 font-bold block mb-1">① 1日あたりの使用想定</span>
+                                    <span class="text-lg font-extrabold text-slate-800">1日 1.0 サイクル</span>
+                                    <span class="text-[10px] text-slate-400 block mt-1">（毎日必ずフル充放電）</span>
+                                </div>
+                                <div class="bg-slate-50 border border-slate-200/60 p-4 rounded-xl text-center">
+                                    <span class="text-xs text-slate-500 font-bold block mb-1">② 15年間の総日数</span>
+                                    <span class="text-lg font-extrabold text-slate-800">5,475 日間</span>
+                                    <span class="text-[10px] text-slate-400 block mt-1">（365日 × 15年）</span>
+                                </div>
+                                <div class="bg-accent/5 border border-accent/20 p-4 rounded-xl text-center">
+                                    <span class="text-xs text-accent font-bold block mb-1">③ 劣化ロスをリアルに考慮</span>
+                                    <span class="text-lg font-extrabold text-accent">JIS規格寿命性能評価</span>
+                                    <span class="text-[10px] text-accent/60 block mt-1">（実環境での経年劣化を加味）</span>
+                                </div>
+                            </div>
+
+                            <p>
+                                もし、15年間（5,475日間）毎日完全に劣化しない魔法の電池があれば、生涯サイクル数は単純に 5,475 になります。
+                                しかし、現実のリチウムイオン電池は、年月が経つにつれて徐々に容量が劣化していきます。
+                            </p>
+                            <p>
+                                国が定めたJIS規格（JIS C 4413 / JIS C 4414）における定置型蓄電池の寿命性能評価や表示ルールでは、<b>「15年間にわたる経年劣化カーブ」</b>を忠実にシミュレートします。その中で、徐々に低下する容量を考慮した上で、15年間の稼働において実質的に蓄電できる「初期容量換算での累積充放電回数」を算出した結果、<b>4,562回分</b>という数値がひとつの目安として適切であると考えられます。
+                            </p>
+
+                            <div class="bg-amber-50/50 border border-amber-200/80 rounded-2xl p-5 mt-4">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-amber-600 font-bold text-sm">💡 つまり、こういうことです</span>
+                                </div>
+                                <p class="text-sm font-semibold text-slate-800">
+                                    計算式の答えが「4,562以上」である蓄電池は、<br class="hidden sm:inline">
+                                    <span class="text-accent font-extrabold">「15年間（5,475日）、毎日1回以上タフに充放電を繰り返して経年劣化が進んでも、なおインフラとしてしっかりと機能し続けること」</span>の目安が示されているのです。
+                                </p>
+                                <p class="text-xs text-slate-500 mt-2">
+                                    逆に、この値が4,562に満たない製品は、「15年間の毎日使用に耐えられない（劣化が激しすぎる）」か、「1日の充放電量を制限して長持ちさせているように見せている」可能性があり、インフラとしてはタフさに欠けるといえます。
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section 4: Interactive Widget -->
+                    <section class="glass-card rounded-3xl p-6 sm:p-10 mb-8 border-2 border-slate-900 bg-white">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 bg-slate-900 text-white rounded text-[10px] font-bold">TOOL</span>
+                            <h2 class="text-xl sm:text-2xl font-black text-slate-900">真の寿命・タフさ試算ツール</h2>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-6">検討している蓄電池のスペック（性能表示ラベルの値）を入れて、長寿命度を測定してみましょう。</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Form Input -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">① 蓄電池の名称・型番（任意）</label>
+                                    <input type="text" v-model="labelWidget.name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent font-bold" placeholder="検討中の蓄電池名">
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1 h-8 flex items-end pb-1">② 初期実効容量 (kWh)</label>
+                                        <div class="relative">
+                                            <input type="number" step="0.1" v-model.number="labelWidget.initialCapacity" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent font-black text-right">
+                                            <span class="absolute right-3 top-3 text-xs text-slate-400 font-semibold">kWh</span>
+                                        </div>
+                                        <span class="text-[9px] text-slate-400 block mt-1">※実際に使える初期の容量</span>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1 h-8 flex items-end pb-1">③ システム生涯蓄電容量 (MWh)</label>
+                                        <div class="relative">
+                                            <input type="number" step="0.1" v-model.number="labelWidget.lifecycleCapacityMwh" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-12 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent font-black text-right">
+                                            <span class="absolute right-3 top-3 text-xs text-slate-400 font-semibold">MWh</span>
+                                        </div>
+                                        <span class="text-[9px] text-slate-400 block mt-1">※性能表示ラベル記載の累積容量</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-[10px] text-slate-500 space-y-1">
+                                    <p class="font-bold text-slate-600 mb-1">💡 性能表示ラベル（仕様書）の探し方</p>
+                                    <p>・メーカーのカタログの「仕様一覧表」または取扱説明書に必ず記載されています。</p>
+                                    <p>・「生涯蓄電容量」は、仕様表に<b>「生涯蓄電容量 (MWh)」</b>または<b>「累積充放電電力量」</b>という単位で記載されています。1MWh ＝ 1,000kWh です。（例: 35.6MWh ＝ 35,600kWh）</p>
+                                </div>
+                            </div>
+
+                            <!-- Result Panel -->
+                            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col justify-between">
+                                <div class="text-center">
+                                    <span class="text-[10px] font-black text-slate-400 tracking-wider uppercase">試算結果（真のサイクル設計度）</span>
+                                    
+                                    <div class="my-4">
+                                        <span class="text-5xl font-black text-slate-900 tracking-tight">{{ formatNumber(labelWidgetCycleRatio) }}</span>
+                                        <span class="text-slate-500 font-bold text-sm ml-1">回相当</span>
+                                    </div>
+
+                                    <!-- Progress Bar to 4562 -->
+                                    <div class="w-full bg-slate-200 rounded-full h-2.5 mb-4 overflow-hidden">
+                                        <div class="h-2.5 rounded-full transition-all duration-500"
+                                             :class="labelWidgetCycleRatio >= 4562 ? 'bg-accent' : 'bg-rose-500'"
+                                             :style="{ width: Math.min((labelWidgetCycleRatio / 4562) * 100, 100) + '%' }"></div>
+                                    </div>
+
+                                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-sm"
+                                         :class="labelWidgetCycleRatio >= 4562 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'">
+                                        <span class="w-1.5 h-1.5 rounded-full" :class="labelWidgetCycleRatio >= 4562 ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                                        {{ labelWidgetCycleRatio >= 4562 ? 'JIS規格の示す15年設計の目安を満たしています' : 'JIS規格の設計目安（4,562回）に届いていません' }}
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 pt-6 border-t border-slate-200/80 text-xs leading-relaxed text-slate-600">
+                                    <div v-if="labelWidgetCycleRatio >= 4562" class="space-y-1">
+                                        <p class="font-bold text-slate-800">✅ 非常にタフで信頼できる蓄電池です！</p>
+                                        <p>初期容量に対して {{ formatNumber(labelWidgetCycleRatio) }} 回分の耐久性があり、15年（5,475日）毎日充放電を行っても余力を残して劣化に耐えられる「定置型専用設計」の頑丈なバッテリーと言えます。</p>
+                                    </div>
+                                    <div v-else class="space-y-1">
+                                        <p class="font-bold text-slate-800">⚠️ 耐久性・寿命設計に注意が必要です</p>
+                                        <p>JIS規格の設計目安である4,562回分を下回っているため、15年間の毎日使用において劣化が早まる可能性や、1日の充放電能力に制限がある場合があります。導入の際は保証条件等をご確認ください。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Final CTA / Summary -->
+                    <section class="text-center py-10">
+                        <h2 class="text-2xl font-black text-slate-900 mb-4">カタログ値に惑わされず、一生モノの安心を</h2>
+                        <p class="text-sm text-slate-500 max-w-xl mx-auto leading-relaxed mb-6">
+                            蓄電池はご家庭の安心を長期にわたって支え続ける、重要な「生活インフラ」です。実験室の一時的な数値ではなく、国が定めた統一基準（性能表示ラベル）で本当のタフさを見極め、納得のいく蓄電池選びを行いましょう。
+                        </p>
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <button @click="switchView('simulator')" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-extrabold px-8 py-3.5 rounded-xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-sm">
+                                経済効果シミュレーターを始める
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </section>
+                </main>
+
+                <!-- Footer -->
+                <footer class="text-center text-xs text-slate-400 mt-12 pt-8 border-t border-slate-200/60 no-print">
+                    <p>© 2026 蓄電池経済性シミュレーター. All Rights Reserved. (JIS C 4413 / JIS C 4414 性能規格・安全基準準拠)</p>
+                </footer>
+            </div>
+        </div>
+
+        <!-- [View 2] 経済効果シミュレーター画面 -->
+        <div v-else-if="currentView === 'simulator'" class="min-h-screen pb-20 bg-[#f8fafc]">
+            <!-- Header -->
+            <header class="bg-dark text-white shadow-lg sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <svg class="w-8 h-8 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -154,16 +487,23 @@
                     </svg>
                     <h1 class="text-xl font-bold tracking-tight">蓄電池 比較＆経済性シミュレーター</h1>
                 </div>
-                <!-- 印刷ボタン -->
-                <button onclick="window.scrollTo(0,0); setTimeout(() => window.print(), 100);"
-                    class="no-print bg-white text-dark text-sm font-bold px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors shadow-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
-                        </path>
-                    </svg>
-                    PDF出力 / 印刷
-                </button>
+                <div class="flex items-center gap-2 no-print">
+                    <!-- 性能表示ラベル解説へ戻るボタン -->
+                    <button @click="switchView('label')"
+                        class="bg-slate-800 text-white border border-slate-700 text-sm font-bold px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2">
+                        💡 性能表示ラベルの解説へ
+                    </button>
+                    <!-- 印刷ボタン -->
+                    <button onclick="window.scrollTo(0,0); setTimeout(() => window.print(), 100);"
+                        class="no-print bg-white text-dark text-sm font-bold px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                            </path>
+                        </svg>
+                        PDF出力 / 印刷
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -464,7 +804,7 @@
                             <div class="col-span-1 md:col-span-2">
                                 <label class="block text-sm font-medium mb-1 flex items-center justify-between">
                                     <span>{{ activeTab === 'A' ? 'システム生涯蓄電容量' : '生涯充放電容量' }} (kWh)</span>
-                                    <a href="performance_label.html" target="_blank" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1">
+                                    <a href="#" @click.prevent="switchView('label')" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1">
                                         💡 性能表示ラベルとは？
                                     </a>
                                 </label>
@@ -816,7 +1156,7 @@
                                     </p>
                                 </div>
                             </div>
-                            <a href="performance_label.html" target="_blank" class="w-full sm:w-auto text-center bg-primary hover:bg-primary/90 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-200 text-xs inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
+                            <a href="#" @click.prevent="switchView('label')" class="w-full sm:w-auto text-center bg-primary hover:bg-primary/90 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-200 text-xs inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
                                 性能表示ラベルの解説ページを見る
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3.5 h-3.5">
                                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
@@ -1027,6 +1367,7 @@
                 </div>
             </div>
         </div>
+        </div> <!-- [View 2] simulator view 閉じタグ -->
 
     </div>
 
@@ -1036,6 +1377,12 @@
         createApp({
             data() {
                 return {
+                    currentView: 'label', // 'label': 性能表示ラベル解説画面, 'simulator': シミュレーター本体
+                    labelWidget: {
+                        name: '',
+                        initialCapacity: 12.0,
+                        lifecycleCapacityMwh: 58.0
+                    },
                     inputs: {
                         annualProduction: 5000,
                         annualConsumption: 6000,
@@ -1493,6 +1840,11 @@
                 }
             },
             computed: {
+                labelWidgetCycleRatio() {
+                    if (!this.labelWidget.initialCapacity || this.labelWidget.initialCapacity <= 0) return 0;
+                    const lifecycleCapacityKwh = this.labelWidget.lifecycleCapacityMwh * 1000;
+                    return Math.round(lifecycleCapacityKwh / this.labelWidget.initialCapacity);
+                },
                 currentBattery: {
                     get() { return this.activeTab === 'A' ? this.inputs.batteryA : this.inputs.batteryB; },
                     set(val) { if (this.activeTab === 'A') this.inputs.batteryA = val; else this.inputs.batteryB = val; }
@@ -1501,6 +1853,15 @@
                 isValidB() { return this.isBatteryValid(this.inputs.batteryB); }
             },
             methods: {
+                switchView(viewName) {
+                    this.currentView = viewName;
+                    this.$nextTick(() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        if (viewName === 'simulator') {
+                            this.calculateSimulation(); // 計算とグラフ初期描画
+                        }
+                    });
+                },
                 isBatteryValid(bat) {
                     if (!bat) return false;
                     if (!bat.model || bat.model.toString().trim() === '') return false;
