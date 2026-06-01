@@ -462,8 +462,12 @@
                                 </p>
                             </div>
                             <div class="col-span-1 md:col-span-2">
-                                <label class="block text-sm font-medium mb-1">{{ activeTab === 'A' ? 'システム生涯蓄電容量' :
-                                    '生涯充放電容量' }} (kWh)</label>
+                                <label class="block text-sm font-medium mb-1 flex items-center justify-between">
+                                    <span>{{ activeTab === 'A' ? 'システム生涯蓄電容量' : '生涯充放電容量' }} (kWh)</span>
+                                    <a href="performance_label.html" target="_blank" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1">
+                                        💡 性能表示ラベルとは？
+                                    </a>
+                                </label>
                                 <input type="number" v-model.number="currentBattery.lifecycleCapacity"
                                     class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
                             </div>
@@ -800,6 +804,25 @@
                         <p class="text-[10px] text-gray-500 mt-4 leading-relaxed">
                             ※蓄電池の効率は充放電時のエネルギー損失に直結します。効率が高いほど、同じ生涯サイクル回数でも「実際に使える総電力量」が増え、結果として大きな経済メリットを生み出します。
                         </p>
+                        <div class="mt-4 pt-4 border-t border-blue-100/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-blue-50/40 p-4 rounded-xl no-print">
+                            <div class="flex items-start gap-2.5 text-left">
+                                <span class="text-lg leading-none mt-0.5">💡</span>
+                                <div class="space-y-0.5">
+                                    <p class="text-[10px] font-bold text-gray-700">
+                                        カタログの「12,000サイクル」などのサイクル数と、実際の寿命はどう違う？
+                                    </p>
+                                    <p class="text-[9px] text-gray-500">
+                                        国が定めた統一規格<b>「性能表示ラベル」</b>で本当のタフさを見分ける方法をわかりやすく解説。
+                                    </p>
+                                </div>
+                            </div>
+                            <a href="performance_label.html" target="_blank" class="w-full sm:w-auto text-center bg-primary hover:bg-primary/90 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-200 text-xs inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                性能表示ラベルの解説ページを見る
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3.5 h-3.5">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+                                </svg>
+                            </a>
+                        </div>
                     </div>
 
                     <!-- 拡販機能：防災メリットの可視化 (移動済み) -->
