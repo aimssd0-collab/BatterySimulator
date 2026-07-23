@@ -782,6 +782,18 @@ const { createApp } = Vue
                     const lifecycleLimit = batteryObj ? (batteryObj.lifecycleCapacity || 9999999) : 9999999;
                     const hasAiArbitrage = batteryObj ? batteryObj.aiArbitrage : false;
 
+                    // 山形発電モデル（6:00〜18:00の正弦波プロファイル）
+                    const solarProfile = (function() {
+                        const weights = new Array(24).fill(0);
+                        let sum = 0;
+                        for (let h = 6; h < 18; h++) {
+                            const w = Math.sin((h - 6 + 0.5) / 12 * Math.PI);
+                            weights[h] = w;
+                            sum += w;
+                        }
+                        return weights.map(w => w / sum);
+                    })();
+
                     let yearlyData = [];
                     let totalDischargedKwh = 0;
                     let deathYear = null;
@@ -807,7 +819,7 @@ const { createApp } = Vue
                                 else if (h < 16) load_h = (dailyCons * 0.4) / 8;
                                 else load_h = (dailyCons * 0.4) / 8;
 
-                                let yield_h = (h >= 8 && h < 16) ? dailyProd / 8 : 0;
+                                let yield_h = dailyProd * solarProfile[h];
                                 const price_h = this.getPriceForHour(h, year - 1);
 
                                 if (yield_h >= load_h) {
