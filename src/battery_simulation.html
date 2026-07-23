@@ -78,7 +78,7 @@
         @media print {
             @page {
                 size: landscape;
-                margin: 10mm;
+                margin: 8mm;
             }
 
             html,
@@ -117,27 +117,37 @@
                 box-shadow: none !important;
                 -webkit-backdrop-filter: none !important;
                 backdrop-filter: none !important;
-                margin-bottom: 20px !important;
+                margin-bottom: 12px !important;
+                padding: 1rem !important;
             }
 
             .print-break-avoid {
-                page-break-inside: avoid;
-                break-inside: avoid;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
 
             .print-page-break {
-                page-break-before: always;
-                break-before: page;
+                page-break-before: always !important;
+                break-before: page !important;
                 margin-top: 0 !important;
                 padding-top: 0 !important;
             }
 
             .print-mt-8 {
-                margin-top: 2rem !important;
+                margin-top: 1.5rem !important;
             }
 
             canvas {
-                max-height: 300px !important;
+                max-height: 250px !important;
+            }
+
+            #compareChart {
+                max-height: 240px !important;
+            }
+
+            #solarPieChartA,
+            #solarPieChartB {
+                max-height: 170px !important;
             }
         }
 
@@ -964,7 +974,7 @@
                     </div>
 
                     <!-- Compare Chart -->
-                    <div class="glass-panel p-6 rounded-2xl relative print-page-break print-mt-8">
+                    <div class="glass-panel p-6 rounded-2xl relative print-page-break print-break-avoid print-mt-8">
                         <div
                             class="absolute -top-3 -right-3 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white transform rotate-3">
                             電気代高騰リスク {{ inputs.inflationRate }}% 反映済！
@@ -1096,7 +1106,7 @@
                     </div>
 
                     <!-- Solar Production Breakdown Pie Charts Panel -->
-                    <div class="glass-panel p-6 rounded-2xl relative print-page-break print-mt-8 mb-6">
+                    <div class="glass-panel p-6 rounded-2xl relative print-page-break print-break-avoid print-mt-8 mb-6">
                         <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
                             <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
@@ -1113,7 +1123,7 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <!-- 蓄電池Aの内訳 -->
-                            <div v-if="isValidA && results && results.A && results.A.solarBreakdown" class="bg-gray-50/80 rounded-xl p-4 border border-gray-200">
+                            <div v-if="isValidA && results && results.A && results.A.solarBreakdown" class="bg-gray-50/80 rounded-xl p-4 border border-gray-200 print-break-avoid">
                                 <div class="flex items-center justify-between border-b pb-2 mb-3">
                                     <span class="font-bold text-blue-800 text-sm">【蓄電池A】{{ inputs.batteryA.model }}</span>
                                     <span class="text-xs text-gray-500">年間発電: {{ formatNumber(results.A.solarBreakdown.totalKwh) }} kWh</span>
@@ -1169,7 +1179,7 @@
                             </div>
 
                             <!-- 蓄電池Bの内訳 -->
-                            <div v-if="isValidB && results && results.B && results.B.solarBreakdown" class="bg-gray-50/80 rounded-xl p-4 border border-gray-200">
+                            <div v-if="isValidB && results && results.B && results.B.solarBreakdown" class="bg-gray-50/80 rounded-xl p-4 border border-gray-200 print-break-avoid">
                                 <div class="flex items-center justify-between border-b pb-2 mb-3">
                                     <span class="font-bold text-amber-800 text-sm">【蓄電池B】{{ inputs.batteryB.model }}</span>
                                     <span class="text-xs text-gray-500">年間発電: {{ formatNumber(results.B.solarBreakdown.totalKwh) }} kWh</span>
