@@ -786,6 +786,11 @@
                                     class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none" step="0.1">
                             </div>
                             <div>
+                                <label class="block text-sm font-medium mb-1">過積載充電 (kW)</label>
+                                <input type="number" v-model.number="currentBattery.overloadCharge"
+                                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none" step="0.1" placeholder="1.0">
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium mb-1">定格充放電効率 (%)</label>
                                 <input type="number" v-model.number="currentBattery.efficiency"
                                     class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none" max="100"
@@ -923,6 +928,7 @@
                                         <th class="p-2">機器名称</th>
                                         <th class="p-2">実効容量</th>
                                         <th class="p-2">出力</th>
+                                        <th class="p-2">過積載充電</th>
                                         <th class="p-2">効率</th>
                                         <th class="p-2">AI経済モード</th>
                                         <th class="p-2">生涯容量目安</th>
@@ -934,6 +940,7 @@
                                         <td class="p-2 font-bold text-blue-700">【A】{{ inputs.batteryA.model }}</td>
                                         <td class="p-2">{{ inputs.batteryA.effectiveCapacity }} kWh</td>
                                         <td class="p-2">{{ inputs.batteryA.output }} kW</td>
+                                        <td class="p-2">{{ inputs.batteryA.overloadCharge !== undefined && inputs.batteryA.overloadCharge !== null ? inputs.batteryA.overloadCharge : 1.0 }} kW</td>
                                         <td class="p-2">{{ inputs.batteryA.efficiency }}%</td>
                                         <td class="p-2">{{ inputs.batteryA.aiArbitrage ? 'あり' : 'なし' }}</td>
                                         <td class="p-2">{{ formatNumber(inputs.batteryA.lifecycleCapacity) }} kWh</td>
@@ -944,6 +951,7 @@
                                         <td class="p-2 font-bold text-amber-700">【B】{{ inputs.batteryB.model }}</td>
                                         <td class="p-2">{{ inputs.batteryB.effectiveCapacity }} kWh</td>
                                         <td class="p-2">{{ inputs.batteryB.output }} kW</td>
+                                        <td class="p-2">{{ inputs.batteryB.overloadCharge !== undefined && inputs.batteryB.overloadCharge !== null ? inputs.batteryB.overloadCharge : 1.0 }} kW</td>
                                         <td class="p-2">{{ inputs.batteryB.efficiency }}%</td>
                                         <td class="p-2">{{ inputs.batteryB.aiArbitrage ? 'あり' : 'なし' }}</td>
                                         <td class="p-2">{{ formatNumber(inputs.batteryB.lifecycleCapacity) }} kWh</td>
@@ -1306,6 +1314,7 @@
                                 <div class="text-xs text-gray-500 mt-1 flex gap-3">
                                     <span>容量: {{ bat.effectiveCapacity }}kWh</span>
                                     <span>出力: {{ bat.output }}kW</span>
+                                    <span>過積載充電: {{ bat.overloadCharge !== undefined && bat.overloadCharge !== null ? bat.overloadCharge : 1.0 }}kW</span>
                                     <span>効率: {{ bat.efficiency }}%</span>
                                 </div>
                             </div>
@@ -1405,6 +1414,7 @@
                             model: 'LUNA2000-4.95-14-N',
                             effectiveCapacity: 13.4,
                             output: 4.95,
+                            overloadCharge: 7.0,
                             efficiency: 91.7,
                             lifecycleCapacity: 78173,
                             aiArbitrage: true
@@ -1413,6 +1423,7 @@
                             model: '12.7kWh蓄電池',
                             effectiveCapacity: 10.9,
                             output: 5,
+                            overloadCharge: 1.0,
                             efficiency: 87.2,
                             lifecycleCapacity: 54084,
                             aiArbitrage: true
@@ -1423,8 +1434,8 @@
                     chartInstance: null,
                     loanChartInstance: null,
                     savedBatteries: [
-                        { model: 'LUNA2000-4.95-7-N', effectiveCapacity: 6.7, output: 3.5, efficiency: 91.7, lifecycleCapacity: 39086, aiArbitrage: true },
-                        { model: 'LUNA2000-4.95-21-N', effectiveCapacity: 20.1, output: 4.95, efficiency: 91.7, lifecycleCapacity: 117260, aiArbitrage: true }
+                        { model: 'LUNA2000-4.95-7-N', effectiveCapacity: 6.7, output: 3.5, overloadCharge: 3.5, efficiency: 91.7, lifecycleCapacity: 39086, aiArbitrage: true },
+                        { model: 'LUNA2000-4.95-21-N', effectiveCapacity: 20.1, output: 4.95, overloadCharge: 7.0, efficiency: 91.7, lifecycleCapacity: 117260, aiArbitrage: true }
                     ],
                     showBatteryModal: false,
                     savedPlans: [
@@ -1864,6 +1875,17 @@
                         }
                     });
                 },
+                getDefaultOverloadCharge(model) {
+                    if (!model) return 1.0;
+                    const str = model.toString().trim();
+                    if (str.includes('LUNA2000-4.95-14-N')) return 7.0;
+                    if (str.includes('LUNA2000-4.95-7-N')) return 3.5;
+                    if (str.includes('LUNA2000-4.95-21-N')) return 7.0;
+                    if (str.includes('LUNA2000-4.95-5-N')) return 1.5;
+                    if (str.includes('LUNA2000-4.95-10-N')) return 3.0;
+                    if (str.includes('LUNA2000-4.95-15-N')) return 4.5;
+                    return 1.0;
+                },
                 isBatteryValid(bat) {
                     if (!bat) return false;
                     if (!bat.model || bat.model.toString().trim() === '') return false;
@@ -1871,6 +1893,9 @@
                     if (typeof bat.output !== 'number' || isNaN(bat.output) || bat.output <= 0) return false;
                     if (typeof bat.efficiency !== 'number' || isNaN(bat.efficiency) || bat.efficiency <= 0 || bat.efficiency > 100) return false;
                     if (typeof bat.lifecycleCapacity !== 'number' || isNaN(bat.lifecycleCapacity) || bat.lifecycleCapacity <= 0) return false;
+                    if (bat.overloadCharge === undefined || bat.overloadCharge === null || isNaN(bat.overloadCharge) || bat.overloadCharge < 0) {
+                        bat.overloadCharge = this.getDefaultOverloadCharge(bat.model);
+                    }
                     return true;
                 },
                 formatNumber(num) { return Math.round(num).toLocaleString(); },
@@ -1929,14 +1954,22 @@
                                 const output = parseFloat(cols[2]);
                                 const efficiency = parseFloat(cols[3]);
                                 const lifecycleCapacity = parseFloat(cols[4]);
+                                let overloadCharge = this.getDefaultOverloadCharge(model);
+                                if (cols.length > 6 && cols[6] && !isNaN(parseFloat(cols[6]))) {
+                                    overloadCharge = parseFloat(cols[6]);
+                                } else if (cols.length > 5 && !isNaN(parseFloat(cols[5]))) {
+                                    overloadCharge = parseFloat(cols[5]);
+                                }
 
                                 let aiArbitrage = true;
                                 if (cols.length > 5 && cols[5]) {
                                     const aiStr = cols[5].trim().toLowerCase();
-                                    aiArbitrage = !(aiStr === '0' || aiStr === 'false' || aiStr === 'なし');
+                                    if (aiStr === '0' || aiStr === 'false' || aiStr === 'なし') {
+                                        aiArbitrage = false;
+                                    }
                                 }
 
-                                const bat = { model, effectiveCapacity, output, efficiency, lifecycleCapacity, aiArbitrage };
+                                const bat = { model, effectiveCapacity, output, overloadCharge, efficiency, lifecycleCapacity, aiArbitrage };
 
                                 if (this.isBatteryValid(bat)) {
                                     this.savedBatteries.push(bat);
@@ -2193,6 +2226,8 @@
                     const eff = (batteryObj ? (batteryObj.efficiency || 100) / 100 : 1.0);
                     const maxCapOriginal = batteryObj ? (batteryObj.effectiveCapacity || 0) : 0;
                     const maxOut = batteryObj ? (batteryObj.output || 999) : 0;
+                    const defaultOverload = batteryObj ? this.getDefaultOverloadCharge(batteryObj.model) : 1.0;
+                    const overloadCharge = batteryObj ? (batteryObj.overloadCharge !== undefined && batteryObj.overloadCharge !== null && !isNaN(batteryObj.overloadCharge) ? Number(batteryObj.overloadCharge) : defaultOverload) : 0;
                     const lifecycleLimit = batteryObj ? (batteryObj.lifecycleCapacity || 9999999) : 9999999;
                     const hasAiArbitrage = batteryObj ? batteryObj.aiArbitrage : false;
 
@@ -2275,15 +2310,24 @@
                                         let yield_h = dailyProd * solarProfile[h];
                                         const price_h = this.getPriceForHour(h, year - 1, month, isOff);
 
-                                        if (yield_h >= load_h) {
-                                            let excess = yield_h - load_h;
+                                        // 過積載充電を考慮した太陽光受容上限電力
+                                        const Y_cap = batteryObj ? (maxOut + overloadCharge) : maxOut;
+                                        const effectiveYield = Math.min(yield_h, Y_cap);
+
+                                        if (effectiveYield >= load_h) {
+                                            let excess = effectiveYield - load_h;
                                             let chargeSpace = Math.max(0, maxCapThisYear - tempBatteryLevel);
                                             let chargeAmount = Math.min(excess, maxOut, chargeSpace);
                                             tempBatteryLevel += chargeAmount * eff;
-                                            let soldAmount = excess - chargeAmount;
+
+                                            let excessAfterCharge = excess - chargeAmount;
+                                            // AC出力上限（PCS定格出力 maxOut）の制約：負荷給電で load_h 使用中のため、PCSからの売電上限は max(0, maxOut - load_h)
+                                            let maxSoldCapacity = Math.max(0, maxOut - load_h);
+                                            let soldAmount = Math.min(excessAfterCharge, maxSoldCapacity);
+
                                             if (d === 1) dailySold += soldAmount;
                                         } else {
-                                            let shortage = load_h - yield_h;
+                                            let shortage = load_h - effectiveYield;
                                             let dischargeAmount = Math.min(shortage, maxOut, tempBatteryLevel);
                                             tempBatteryLevel -= dischargeAmount;
                                             if (d === 1) dailyBatteryConsumed += dischargeAmount;

@@ -23,6 +23,7 @@ const { createApp } = Vue
                             model: 'LUNA2000-4.95-14-N',
                             effectiveCapacity: 13.4,
                             output: 4.95,
+                            overloadCharge: 7.0,
                             efficiency: 91.7,
                             lifecycleCapacity: 78173,
                             aiArbitrage: true
@@ -31,6 +32,7 @@ const { createApp } = Vue
                             model: '12.7kWh蓄電池',
                             effectiveCapacity: 10.9,
                             output: 5,
+                            overloadCharge: 1.0,
                             efficiency: 87.2,
                             lifecycleCapacity: 54084,
                             aiArbitrage: true
@@ -41,8 +43,8 @@ const { createApp } = Vue
                     chartInstance: null,
                     loanChartInstance: null,
                     savedBatteries: [
-                        { model: 'LUNA2000-4.95-7-N', effectiveCapacity: 6.7, output: 3.5, efficiency: 91.7, lifecycleCapacity: 39086, aiArbitrage: true },
-                        { model: 'LUNA2000-4.95-21-N', effectiveCapacity: 20.1, output: 4.95, efficiency: 91.7, lifecycleCapacity: 117260, aiArbitrage: true }
+                        { model: 'LUNA2000-4.95-7-N', effectiveCapacity: 6.7, output: 3.5, overloadCharge: 3.5, efficiency: 91.7, lifecycleCapacity: 39086, aiArbitrage: true },
+                        { model: 'LUNA2000-4.95-21-N', effectiveCapacity: 20.1, output: 4.95, overloadCharge: 7.0, efficiency: 91.7, lifecycleCapacity: 117260, aiArbitrage: true }
                     ],
                     showBatteryModal: false,
                     savedPlans: [
@@ -468,6 +470,17 @@ const { createApp } = Vue
                 isValidB() { return this.isBatteryValid(this.inputs.batteryB); }
             },
             methods: {
+                getDefaultOverloadCharge(model) {
+                    if (!model) return 1.0;
+                    const str = model.toString().trim();
+                    if (str.includes('LUNA2000-4.95-14-N')) return 7.0;
+                    if (str.includes('LUNA2000-4.95-7-N')) return 3.5;
+                    if (str.includes('LUNA2000-4.95-21-N')) return 7.0;
+                    if (str.includes('LUNA2000-4.95-5-N')) return 1.5;
+                    if (str.includes('LUNA2000-4.95-10-N')) return 3.0;
+                    if (str.includes('LUNA2000-4.95-15-N')) return 4.5;
+                    return 1.0;
+                },
                 isBatteryValid(bat) {
                     if (!bat) return false;
                     if (!bat.model || bat.model.toString().trim() === '') return false;
@@ -475,6 +488,9 @@ const { createApp } = Vue
                     if (typeof bat.output !== 'number' || isNaN(bat.output) || bat.output <= 0) return false;
                     if (typeof bat.efficiency !== 'number' || isNaN(bat.efficiency) || bat.efficiency <= 0 || bat.efficiency > 100) return false;
                     if (typeof bat.lifecycleCapacity !== 'number' || isNaN(bat.lifecycleCapacity) || bat.lifecycleCapacity <= 0) return false;
+                    if (bat.overloadCharge === undefined || bat.overloadCharge === null || isNaN(bat.overloadCharge) || bat.overloadCharge < 0) {
+                        bat.overloadCharge = this.getDefaultOverloadCharge(bat.model);
+                    }
                     return true;
                 },
                 formatNumber(num) { return Math.round(num).toLocaleString(); },
@@ -533,12 +549,20 @@ const { createApp } = Vue
                                 const output = parseFloat(cols[2]);
                                 const efficiency = parseFloat(cols[3]);
                                 const lifecycleCapacity = parseFloat(cols[4]);
+                                let overloadCharge = this.getDefaultOverloadCharge(model);
+                                if (cols.length > 6 && cols[6] && !isNaN(parseFloat(cols[6]))) {
+                                    overloadCharge = parseFloat(cols[6]);
+                                } else if (cols.length > 5 && !isNaN(parseFloat(cols[5]))) {
+                                    overloadCharge = parseFloat(cols[5]);
+                                }
                                 let aiArbitrage = true;
                                 if (cols.length > 5 && cols[5]) {
                                     const aiStr = cols[5].trim().toLowerCase();
-                                    aiArbitrage = !(aiStr === '0' || aiStr === 'false' || aiStr === 'none');
+                                    if (aiStr === '0' || aiStr === 'false' || aiStr === 'none' || aiStr === 'なし') {
+                                        aiArbitrage = false;
+                                    }
                                 }
-                                const bat = { model, effectiveCapacity, output, efficiency, lifecycleCapacity, aiArbitrage };
+                                const bat = { model, effectiveCapacity, output, overloadCharge, efficiency, lifecycleCapacity, aiArbitrage };
                                 if (this.isBatteryValid(bat)) {
                                     this.savedBatteries.push(bat);
                                     importedCount++;
@@ -779,6 +803,8 @@ const { createApp } = Vue
                     const eff = (batteryObj ? (batteryObj.efficiency || 100) / 100 : 1.0);
                     const maxCapOriginal = batteryObj ? (batteryObj.effectiveCapacity || 0) : 0;
                     const maxOut = batteryObj ? (batteryObj.output || 999) : 0;
+                    const defaultOverload = batteryObj ? this.getDefaultOverloadCharge(batteryObj.model) : 1.0;
+                    const overloadCharge = batteryObj ? (batteryObj.overloadCharge !== undefined && batteryObj.overloadCharge !== null && !isNaN(batteryObj.overloadCharge) ? Number(batteryObj.overloadCharge) : defaultOverload) : 0;
                     const lifecycleLimit = batteryObj ? (batteryObj.lifecycleCapacity || 9999999) : 9999999;
                     const hasAiArbitrage = batteryObj ? batteryObj.aiArbitrage : false;
 
@@ -809,7 +835,6 @@ const { createApp } = Vue
                         let batteryLevel = 0;
                         let dailyGridCostNoSolarNoBattery = 0; 
 
-                        
                         for (let d = 0; d < 2; d++) {
                             if (d === 1) { dailyGridCost = 0; dailySold = 0; dailyBatteryConsumed = 0; }
 
@@ -822,15 +847,22 @@ const { createApp } = Vue
                                 let yield_h = dailyProd * solarProfile[h];
                                 const price_h = this.getPriceForHour(h, year - 1);
 
-                                if (yield_h >= load_h) {
-                                    let excess = yield_h - load_h;
+                                const Y_cap = batteryObj ? (maxOut + overloadCharge) : maxOut;
+                                const effectiveYield = Math.min(yield_h, Y_cap);
+
+                                if (effectiveYield >= load_h) {
+                                    let excess = effectiveYield - load_h;
                                     let chargeSpace = Math.max(0, maxCapThisYear - batteryLevel);
                                     let chargeAmount = Math.min(excess, maxOut, chargeSpace);
                                     batteryLevel += chargeAmount * eff;
-                                    let soldAmount = excess - chargeAmount;
+
+                                    let excessAfterCharge = excess - chargeAmount;
+                                    let maxSoldCapacity = Math.max(0, maxOut - load_h);
+                                    let soldAmount = Math.min(excessAfterCharge, maxSoldCapacity);
+
                                     if (d === 1) dailySold += soldAmount;
                                 } else {
-                                    let shortage = load_h - yield_h;
+                                    let shortage = load_h - effectiveYield;
                                     let dischargeAmount = Math.min(shortage, maxOut, batteryLevel);
                                     batteryLevel -= dischargeAmount;
                                     if (d === 1) dailyBatteryConsumed += dischargeAmount;
