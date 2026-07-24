@@ -798,11 +798,13 @@ const { createApp } = Vue
                 },
 
                 runSimulation(batteryObj) {
-                    const dailyProd = this.inputs.annualProduction / 365;
-                    const dailyCons = this.inputs.annualConsumption / 365;
+                    const dailyProdBase = this.inputs.annualProduction / 365;
+                    const dailyConsBase = this.inputs.annualConsumption / 365;
                     const eff = (batteryObj ? (batteryObj.efficiency || 100) / 100 : 1.0);
+                    const pcsLossRate = (1 - eff) / 2; // PCS変換ロス率は蓄電池ロスの半分
                     const maxCapOriginal = batteryObj ? (batteryObj.effectiveCapacity || 0) : 0;
-                    const maxOut = batteryObj ? (batteryObj.output || 999) : 0;
+                    const maxOut = batteryObj ? (batteryObj.output || 999) : 0;          // PCS定格出力（売電・負荷給電上限）
+                    const maxBatOut = batteryObj ? (batteryObj.batteryOutput !== undefined && batteryObj.batteryOutput !== null && !isNaN(batteryObj.batteryOutput) && batteryObj.batteryOutput > 0 ? Number(batteryObj.batteryOutput) : (batteryObj.output || 999)) : 0; // 蓄電池充放電能力
                     const defaultOverload = batteryObj ? this.getDefaultOverloadCharge(batteryObj.model) : 1.0;
                     const overloadCharge = batteryObj ? (batteryObj.overloadCharge !== undefined && batteryObj.overloadCharge !== null && !isNaN(batteryObj.overloadCharge) ? Number(batteryObj.overloadCharge) : defaultOverload) : 0;
                     const lifecycleLimit = batteryObj ? (batteryObj.lifecycleCapacity || 9999999) : 9999999;
@@ -824,96 +826,197 @@ const { createApp } = Vue
                     let totalDischargedKwh = 0;
                     let deathYear = null;
 
+                    let firstYearSelfConsKwh = 0;
+                    let firstYearSoldKwh = 0;
+                    let firstYearLossKwh = 0;
+                    let firstYearPeakCutKwh = 0;
+
                     for (let year = 1; year <= 15; year++) {
                         let maxCapThisYear = (totalDischargedKwh >= lifecycleLimit) ? 0 : maxCapOriginal;
                         if (maxCapThisYear === 0 && deathYear === null) {
                             deathYear = year;
                         }
-                        let dailyGridCost = 0;
-                        let dailySold = 0;
-                        let dailyBatteryConsumed = 0;
-                        let batteryLevel = 0;
-                        let dailyGridCostNoSolarNoBattery = 0; 
 
-                        for (let d = 0; d < 2; d++) {
-                            if (d === 1) { dailyGridCost = 0; dailySold = 0; dailyBatteryConsumed = 0; }
-
-                            for (let h = 0; h < 24; h++) {
-                                let load_h = 0;
-                                if (h < 8) load_h = (dailyCons * 0.2) / 8;
-                                else if (h < 16) load_h = (dailyCons * 0.4) / 8;
-                                else load_h = (dailyCons * 0.4) / 8;
-
-                                let yield_h = dailyProd * solarProfile[h];
-                                const price_h = this.getPriceForHour(h, year - 1);
-
-                                const Y_cap = batteryObj ? (maxOut + overloadCharge) : maxOut;
-                                const effectiveYield = Math.min(yield_h, Y_cap);
-
-                                if (effectiveYield >= load_h) {
-                                    let excess = effectiveYield - load_h;
-                                    let chargeSpace = Math.max(0, maxCapThisYear - batteryLevel);
-                                    let chargeAmount = Math.min(excess, maxOut, chargeSpace);
-                                    batteryLevel += chargeAmount * eff;
-
-                                    let excessAfterCharge = excess - chargeAmount;
-                                    let maxSoldCapacity = Math.max(0, maxOut - load_h);
-                                    let soldAmount = Math.min(excessAfterCharge, maxSoldCapacity);
-
-                                    if (d === 1) dailySold += soldAmount;
-                                } else {
-                                    let shortage = load_h - effectiveYield;
-                                    let dischargeAmount = Math.min(shortage, maxOut, batteryLevel);
-                                    batteryLevel -= dischargeAmount;
-                                    if (d === 1) dailyBatteryConsumed += dischargeAmount;
-                                    let gridBuyAmount = shortage - dischargeAmount;
-                                    if (d === 1) dailyGridCost += gridBuyAmount * price_h;
-                                }
-                                
-                                if (d === 1 && !batteryObj) {
-                                    dailyGridCostNoSolarNoBattery += load_h * price_h;
-                                }
-                            }
-                        }
-
-                        
-                        const annualGridCostStandard = dailyGridCost * 365;
-                        const annualSoldStandardKwh = dailySold * 365;
-                        const annualGridCostNoSolarNoBattery = dailyGridCostNoSolarNoBattery * 365;
-
-                        
-                        let selfConsumptionRate = null;
-                        if (year === 1 && this.inputs.annualProduction > 0) {
-                            selfConsumptionRate = ((this.inputs.annualProduction - annualSoldStandardKwh) / this.inputs.annualProduction) * 100;
-                        }
-
-                        
-                        
+                        let annualGridCostStandard = 0;
+                        let annualSoldStandardKwh = 0;
+                        let annualGridCostNoSolarNoBattery = 0;
+                        let annualBatteryConsumed = 0;
                         let arbitrageBonusCostReduction = 0;
                         let arbitrageDischargedKwh = 0;
+                        let batteryLevel = 0;
 
-                        if (hasAiArbitrage && maxCapThisYear > 0) {
-                            let lowest = this.getLowestPrice(year - 1);
-                            let highest = this.getHighestPrice(year - 1);
-                            if (highest > lowest) {
-                                
-                                let arbitrageDays = 100;
-                                let chargeVolume = maxCapThisYear;
-                                
-                                let extraNightCost = (chargeVolume / eff) * lowest;
-                                
-                                let savedDayCost = chargeVolume * highest;
+                        // 各月の日数と休日数の目安 (土日祝 + お盆年末年始などを加味し 年間120日休日想定)
+                        const monthData = [
+                            { m: 1, days: 31, off: 12 },
+                            { m: 2, days: 28, off: 10 },
+                            { m: 3, days: 31, off: 10 },
+                            { m: 4, days: 30, off: 10 },
+                            { m: 5, days: 31, off: 13 },
+                            { m: 6, days: 30, off: 8 },
+                            { m: 7, days: 31, off: 10 },
+                            { m: 8, days: 31, off: 11 },
+                            { m: 9, days: 30, off: 10 },
+                            { m: 10, days: 31, off: 10 },
+                            { m: 11, days: 30, off: 10 },
+                            { m: 12, days: 31, off: 10 }
+                        ];
 
-                                let dailyArbitrageProfit = savedDayCost - extraNightCost;
-                                if (dailyArbitrageProfit > 0) {
-                                    arbitrageBonusCostReduction = dailyArbitrageProfit * arbitrageDays;
-                                    arbitrageDischargedKwh = chargeVolume * arbitrageDays;
+                        // 月別季節変動係数の定義
+                        // 太陽光発電: 春〜初夏(4〜5月)が高く、冬(12〜1月)が低い
+                        const rawSolarCoeffs = [0.78, 0.90, 1.08, 1.25, 1.35, 1.05, 1.10, 1.18, 0.95, 0.88, 0.75, 0.73];
+                        // 消費電力: 冬(1〜2月:暖房)・夏(7〜8月:冷房)が高く、春・秋(4〜5,10月)が低い
+                        const rawConsCoeffs  = [1.25, 1.22, 1.05, 0.85, 0.80, 0.88, 1.12, 1.20, 0.98, 0.82, 0.90, 1.13];
+
+                        // 年間合計量が入力値と厳密に一致するよう正規化
+                        const totalSolarWeight = monthData.reduce((sum, md) => sum + rawSolarCoeffs[md.m - 1] * md.days, 0);
+                        const solarNorm = 365 / totalSolarWeight;
+                        const totalConsWeight  = monthData.reduce((sum, md) => sum + rawConsCoeffs[md.m - 1] * md.days, 0);
+                        const consNorm  = 365 / totalConsWeight;
+
+                        for (let md of monthData) {
+                            let month = md.m;
+                            let offDays = md.off;
+                            let workDays = md.days - offDays;
+
+                            let dailyProd = dailyProdBase * rawSolarCoeffs[month - 1] * solarNorm;
+                            let dailyCons = dailyConsBase * rawConsCoeffs[month - 1] * consNorm;
+
+                            for (let isOff of [false, true]) {
+                                let daysCount = isOff ? offDays : workDays;
+                                if (daysCount <= 0) continue;
+
+                                let dailyGridCost = 0;
+                                let dailySold = 0;
+                                let dailyBatteryConsumed = 0;
+                                let dailyGridCostNoSolarNoBattery = 0;
+                                let dailySelfCons = 0;
+                                let dailySoldKwh = 0;
+                                let dailyLossKwh = 0;
+                                let dailyPeakCutKwh = 0;
+
+                                // 安定化のために2日回して2日目を採用
+                                let tempBatteryLevel = batteryLevel;
+                                for (let d = 0; d < 2; d++) {
+                                    if (d === 1) { 
+                                        dailyGridCost = 0; 
+                                        dailySold = 0; 
+                                        dailyBatteryConsumed = 0; 
+                                        dailyGridCostNoSolarNoBattery = 0;
+                                        dailySelfCons = 0;
+                                        dailySoldKwh = 0;
+                                        dailyLossKwh = 0;
+                                        dailyPeakCutKwh = 0;
+                                    }
+
+                                    for (let h = 0; h < 24; h++) {
+                                        let load_h = 0;
+                                        if (h < 8) load_h = (dailyCons * 0.2) / 8;
+                                        else if (h < 16) load_h = (dailyCons * 0.4) / 8;
+                                        else load_h = (dailyCons * 0.4) / 8;
+
+                                        let yield_h = dailyProd * solarProfile[h];
+                                        const price_h = this.getPriceForHour(h, year - 1, month, isOff);
+
+                                        // 過積載充電を考慮した太陽光受容上限電力（PCS出力 + 過積載分）
+                                        const Y_cap = batteryObj ? (maxOut + overloadCharge) : maxOut;
+                                        const effectiveYield = Math.min(yield_h, Y_cap);
+
+                                        let selfCons_h = 0;
+                                        let sold_h = 0;
+                                        let loss_h = 0;
+
+                                        if (effectiveYield >= load_h) {
+                                            let directYield = load_h;
+                                            let directSelfCons = directYield * (1 - pcsLossRate);
+                                            let directLoss = directYield * pcsLossRate;
+
+                                            let excess = effectiveYield - load_h;
+                                            let chargeSpace = Math.max(0, maxCapThisYear - tempBatteryLevel);
+                                            let chargeAmount = Math.min(excess, maxBatOut, chargeSpace); // 充電は蓄電池充放電能力で制限
+                                            tempBatteryLevel += chargeAmount * eff;
+
+                                            let excessAfterCharge = excess - chargeAmount;
+                                            // AC出力上限（PCS定格出力 maxOut）の制約：負荷給電で load_h 使用中のため、PCSからの売電上限は max(0, maxOut - load_h)
+                                            let maxSoldCapacity = Math.max(0, maxOut - load_h);
+                                            let soldYield = Math.min(excessAfterCharge, maxSoldCapacity);
+                                            let soldAmount = soldYield * (1 - pcsLossRate);
+                                            let soldLoss = soldYield * pcsLossRate;
+
+                                            let batterySelfCons = chargeAmount * eff;
+                                            let chargeLoss = chargeAmount * (1 - eff);
+
+                                            selfCons_h = directSelfCons + batterySelfCons;
+                                            sold_h = soldAmount;
+                                            loss_h = directLoss + chargeLoss + soldLoss;
+
+                                            if (d === 1) dailySold += soldAmount;
+                                        } else {
+                                            let directYield = effectiveYield;
+                                            let directSelfCons = directYield * (1 - pcsLossRate);
+                                            let directLoss = directYield * pcsLossRate;
+
+                                            selfCons_h = directSelfCons;
+                                            sold_h = 0;
+                                            loss_h = directLoss;
+
+                                            let shortage = load_h - effectiveYield;
+                                            let dischargeAmount = Math.min(shortage, maxBatOut, tempBatteryLevel); // 放電は蓄電池充放電能力で制限
+                                            tempBatteryLevel -= dischargeAmount;
+                                            if (d === 1) dailyBatteryConsumed += dischargeAmount;
+                                            let gridBuyAmount = shortage - dischargeAmount;
+                                            if (d === 1) dailyGridCost += gridBuyAmount * price_h;
+                                        }
+
+                                        if (d === 1) {
+                                            let peakCut_h = Math.max(0, yield_h - (selfCons_h + sold_h + loss_h));
+                                            dailySelfCons += selfCons_h;
+                                            dailySoldKwh += sold_h;
+                                            dailyLossKwh += loss_h;
+                                            dailyPeakCutKwh += peakCut_h;
+                                        }
+
+                                        if (d === 1 && !batteryObj) {
+                                            dailyGridCostNoSolarNoBattery += load_h * price_h;
+                                        }
+                                    }
+                                }
+                                batteryLevel = tempBatteryLevel;
+
+                                annualGridCostStandard += dailyGridCost * daysCount;
+                                annualSoldStandardKwh += dailySold * daysCount;
+                                annualGridCostNoSolarNoBattery += dailyGridCostNoSolarNoBattery * daysCount;
+                                annualBatteryConsumed += dailyBatteryConsumed * daysCount;
+
+                                if (year === 1) {
+                                    firstYearSelfConsKwh += dailySelfCons * daysCount;
+                                    firstYearSoldKwh += dailySoldKwh * daysCount;
+                                    firstYearLossKwh += dailyLossKwh * daysCount;
+                                    firstYearPeakCutKwh += dailyPeakCutKwh * daysCount;
+                                }
+
+                                // アービトラージ計算 (年間約100日想定 -> 各月に按分)
+                                if (hasAiArbitrage && maxCapThisYear > 0) {
+                                    let lowest = this.getLowestPrice(year - 1, month, isOff);
+                                    let highest = this.getHighestPrice(year - 1, month, isOff);
+                                    if (highest > lowest) {
+                                        // 全体の稼働日割合で按分（年間100日が12ヶ月に平準化される想定）
+                                        let arbitrageDays = (daysCount / 365) * 100;
+                                        let chargeVolume = maxCapThisYear;
+                                        let extraNightCost = (chargeVolume / eff) * lowest;
+                                        let savedDayCost = chargeVolume * highest;
+
+                                        let dailyArbitrageProfit = savedDayCost - extraNightCost;
+                                        if (dailyArbitrageProfit > 0) {
+                                            arbitrageBonusCostReduction += dailyArbitrageProfit * arbitrageDays;
+                                            arbitrageDischargedKwh += chargeVolume * arbitrageDays;
+                                        }
+                                    }
                                 }
                             }
                         }
 
                         const finalGridCost = Math.max(0, annualGridCostStandard - arbitrageBonusCostReduction);
-                        const finalDischargedKwh = (dailyBatteryConsumed * 365) + arbitrageDischargedKwh;
+                        const finalDischargedKwh = annualBatteryConsumed + arbitrageDischargedKwh;
 
                         let sellPrice = year <= this.inputs.sellPriceFirstPeriodYears ? this.inputs.sellPriceFirstPeriod : this.inputs.sellPriceSecondPeriod;
                         let finalSoldRevenue = annualSoldStandardKwh * sellPrice;
@@ -925,12 +1028,31 @@ const { createApp } = Vue
                             gridCost: finalGridCost,
                             soldRevenue: finalSoldRevenue,
                             dischargedKwh: finalDischargedKwh,
-                            gridCostNoSolarNoBattery: annualGridCostNoSolarNoBattery,
-                            selfConsumptionRate: selfConsumptionRate
+                            gridCostNoSolarNoBattery: annualGridCostNoSolarNoBattery
                         });
                     }
 
-                    return { yearlyData: yearlyData, deathYear: deathYear, year1SelfConsumptionRate: yearlyData[0].selfConsumptionRate };
+                    const annualProdTotal = this.inputs.annualProduction || (firstYearSelfConsKwh + firstYearSoldKwh + firstYearLossKwh + firstYearPeakCutKwh);
+                    const selfPct = annualProdTotal > 0 ? (firstYearSelfConsKwh / annualProdTotal) * 100 : 0;
+                    const sellPct = annualProdTotal > 0 ? (firstYearSoldKwh / annualProdTotal) * 100 : 0;
+                    const lossPct = annualProdTotal > 0 ? (firstYearLossKwh / annualProdTotal) * 100 : 0;
+                    const peakCutPct = annualProdTotal > 0 ? Math.max(0, 100 - selfPct - sellPct - lossPct) : 0;
+
+                    return {
+                        yearlyData: yearlyData,
+                        deathYear: deathYear,
+                        solarBreakdown: {
+                            selfKwh: firstYearSelfConsKwh,
+                            selfPct: selfPct,
+                            sellKwh: firstYearSoldKwh,
+                            sellPct: sellPct,
+                            lossKwh: firstYearLossKwh,
+                            lossPct: lossPct,
+                            peakCutKwh: firstYearPeakCutKwh,
+                            peakCutPct: peakCutPct,
+                            totalKwh: annualProdTotal
+                        }
+                    };
                 },
 
                 calculateSimulation() {

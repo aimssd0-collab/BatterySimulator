@@ -1404,9 +1404,66 @@
 
                         <!-- Disclaimer -->
                         <div class="bg-gray-100 p-4 rounded-xl border border-gray-200 mt-8 mb-4">
-                            <p class="text-[10px] text-gray-500 leading-relaxed font-medium">
-                                【免責事項】本ツールによるシミュレーション結果は、入力された条件に基づく概算値です。電気代上昇率、天候による発電量のブレ、深夜電力活用のアルゴリズム、経年劣化などは理想的なモデルを用いて計算しているため、実際の経済効果等を保証するものではありません。各機器の機能詳細はメーカーカタログ等をご確認ください。
+                            <p class="text-[10px] text-gray-500 leading-relaxed font-medium mb-3">
+                                【免責事項】本ツールによるシミュレーション結果は、入力された条件に基づく概算値です。発電量および消費電力量は以下の月別季節変動モデル（代表係数）を用いて月別に算出しています。電気代上昇率、天候による発電量のブレ、深夜電力活用のアルゴリズム、経年劣化などは理想的なモデルを用いて計算しているため、実際の経済効果等を保証するものではありません。各機器の機能詳細はメーカーカタログ等をご確認ください。
                             </p>
+                            
+                            <div class="mt-2">
+                                <h4 class="text-[11px] font-bold text-gray-700 mb-1">■ 季節別（月別）代表係数モデル一覧</h4>
+                                <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+                                    <table class="w-full text-[10px] text-center border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-200/70 text-gray-700 font-semibold border-b border-gray-200">
+                                                <th class="py-1.5 px-2 border-r border-gray-200 text-left bg-gray-100 font-bold whitespace-nowrap">月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">1月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">2月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">3月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">4月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">5月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">6月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">7月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">8月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">9月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">10月</th>
+                                                <th class="py-1.5 px-2 border-r border-gray-200">11月</th>
+                                                <th class="py-1.5 px-2">12月</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200 text-gray-600">
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="py-1.5 px-2 font-medium bg-gray-50 border-r border-gray-200 text-gray-700 text-left whitespace-nowrap">発電量係数 (k_solar)</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.78</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.90</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.08</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.25</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.35</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.05</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.10</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.18</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.95</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.88</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.75</td>
+                                                <td class="py-1.5 px-2">0.73</td>
+                                            </tr>
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="py-1.5 px-2 font-medium bg-gray-50 border-r border-gray-200 text-gray-700 text-left whitespace-nowrap">消費量係数 (k_cons)</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.25</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.22</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.05</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.85</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.80</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.88</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.12</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">1.20</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.98</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.82</td>
+                                                <td class="py-1.5 px-2 border-r border-gray-200">0.90</td>
+                                                <td class="py-1.5 px-2">1.13</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2395,8 +2452,8 @@
                 },
 
                 runSimulation(batteryObj) {
-                    const dailyProd = this.inputs.annualProduction / 365;
-                    const dailyCons = this.inputs.annualConsumption / 365;
+                    const dailyProdBase = this.inputs.annualProduction / 365;
+                    const dailyConsBase = this.inputs.annualConsumption / 365;
                     const eff = (batteryObj ? (batteryObj.efficiency || 100) / 100 : 1.0);
                     const pcsLossRate = (1 - eff) / 2; // PCS変換ロス率は蓄電池ロスの半分
                     const maxCapOriginal = batteryObj ? (batteryObj.effectiveCapacity || 0) : 0;
@@ -2458,10 +2515,25 @@
                             { m: 12, days: 31, off: 10 }
                         ];
 
+                        // 月別季節変動係数の定義
+                        // 太陽光発電: 春〜初夏(4〜5月)が高く、冬(12〜1月)が低い
+                        const rawSolarCoeffs = [0.78, 0.90, 1.08, 1.25, 1.35, 1.05, 1.10, 1.18, 0.95, 0.88, 0.75, 0.73];
+                        // 消費電力: 冬(1〜2月:暖房)・夏(7〜8月:冷房)が高く、春・秋(4〜5,10月)が低い
+                        const rawConsCoeffs  = [1.25, 1.22, 1.05, 0.85, 0.80, 0.88, 1.12, 1.20, 0.98, 0.82, 0.90, 1.13];
+
+                        // 年間合計量が入力値と厳密に一致するよう正規化
+                        const totalSolarWeight = monthData.reduce((sum, md) => sum + rawSolarCoeffs[md.m - 1] * md.days, 0);
+                        const solarNorm = 365 / totalSolarWeight;
+                        const totalConsWeight  = monthData.reduce((sum, md) => sum + rawConsCoeffs[md.m - 1] * md.days, 0);
+                        const consNorm  = 365 / totalConsWeight;
+
                         for (let md of monthData) {
                             let month = md.m;
                             let offDays = md.off;
                             let workDays = md.days - offDays;
+
+                            let dailyProd = dailyProdBase * rawSolarCoeffs[month - 1] * solarNorm;
+                            let dailyCons = dailyConsBase * rawConsCoeffs[month - 1] * consNorm;
 
                             for (let isOff of [false, true]) {
                                 let daysCount = isOff ? offDays : workDays;
